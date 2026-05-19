@@ -1,0 +1,75 @@
+:root {
+  --bg: #f6f2ec;
+  --bg-accent-1: #fef6ea;
+  --bg-accent-2: #eef6f4;
+  --surface: #ffffff;
+  --surface-alt: #fdfbf6;
+  --surface-soft: #f7f4ee;
+  --surface-hero: #f7f2ea;
+  --surface-hero-alt: #f2f7f6;
+  --surface-alert: #f8f6f2;
+  --surface-code: #f4efe7;
+  --surface-status: #f5f1ea;
+  --surface-chip: #f1ede6;
+  --surface-review: #faf7f0;
+  --surface-option: #f7f4ee;
+  --surface-grid: #ffffff;
+  --text: #2f2a35;
+  --muted: #6f6876;
+  --border: rgba(43, 34, 24, 0.12);
+  --brand: #2f6f6b;
+  --brand-strong: #1e4f4d;
+  --accent: #e2b56d;
+  --ok: #2f855a;
+  --warn: #c77d1a;
+  --danger: #b94a3c;
+  --shadow: none;
+  --sheen: rgba(255, 255, 255, 0.65);
+  --radius: 18px;
+  --radius-sm: 12px;
+  --space-1: 6px;
+  --space-2: 12px;
+  --space-3: 18px;
+  --space-4: 26px;
+  --space-5: 36px;
+  --font-body:
+    'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'PingFang SC',
+    'Microsoft YaHei', serif;
+  --font-sans:
+    'Source Han Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'Cascadia Mono', 'Courier New', monospace;
+
+  font: 17px/1.7 var(--font-sans);
+  color: var(--text);
+  background: var(--bg);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+html[data-theme='dark'] {
+  --bg: #0f1214;
+  --bg-accent-1: #1a2428;
+  --bg-accent-2: #1b2522;
+  --surface: #161b1e;
+  --surface-alt: #1b2226;
+  --surface-soft: #1f262b;
+  --surface-hero: #1b2326;
+  --surface-hero-alt: #182024;
+  --surface-alert: #1f262b;
+  --surface-code: #12161a;
+  --surface-status: #1f2529;
+  --surface-chip: #1d2327;
+  --surface-review: #1a2024;
+  --surface-option: #1d2327;
+  --surface-grid: #151a1d;
+  --text: #e6e2d9;
+  --muted: #a69f94;
+  --border: rgba(230, 226, 217, 0.14);
+  --brand: #6cc2ba;
+  --brand-strong: #b4ece6;
+  --accent: #e2b56d;
+  --ok: #6ed39a;
+  --warn: #f0b469;
+  --danger: #e67b6f;
+  --sheen: rgba(0, 0, 0, 0.35);
+}

@@ -1,0 +1,34 @@
+@import 'tailwindcss';
+@import './styles/tokens.css';
+@import './styles/base.css';
+
+@theme {
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface-hero: var(--surface-hero);
+  --color-surface-hero-alt: var(--surface-hero-alt);
+  --color-surface-alert: var(--surface-alert);
+  --color-surface-code: var(--surface-code);
+  --color-surface-status: var(--surface-status);
+  --color-surface-chip: var(--surface-chip);
+  --color-surface-review: var(--surface-review);
+  --color-surface-option: var(--surface-option);
+  --color-surface-grid: var(--surface-grid);
+  --color-accent: var(--accent);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+
+  --radius-theme: var(--radius);
+  --radius-theme-sm: var(--radius-sm);
+}
+
+/* Shared across all pages */
+.page {
+  display: grid;
+  gap: var(--space-4);
+}
