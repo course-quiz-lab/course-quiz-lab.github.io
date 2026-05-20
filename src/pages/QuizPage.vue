@@ -58,23 +58,27 @@ async function ensureAttempt(nextMode: Mode) {
     await router.replace('/import');
     return;
   }
-  const loaded = await attemptStore.loadSavedAttempt(
+  const loaded = await attemptStore.loadSavedAttempt();
+  // Resume only if saved attempt matches current bank AND mode
+  if (
+    loaded &&
+    attemptStore.attempt?.bankId === bankStore.bankId &&
+    attemptStore.attempt?.mode === nextMode
+  ) {
+    return;
+  }
+  // Otherwise start a fresh attempt (overwrites any old one)
+  const sq = attemptStore._pendingShuffleQuestions;
+  const so = attemptStore._pendingShuffleOptions;
+  attemptStore._pendingShuffleQuestions = false;
+  attemptStore._pendingShuffleOptions = false;
+  await attemptStore.startAttempt(
     bankStore.bankId,
     nextMode,
+    bankStore.bank.questions,
+    sq,
+    so,
   );
-  if (!loaded) {
-    const sq = attemptStore._pendingShuffleQuestions;
-    const so = attemptStore._pendingShuffleOptions;
-    attemptStore._pendingShuffleQuestions = false;
-    attemptStore._pendingShuffleOptions = false;
-    await attemptStore.startAttempt(
-      bankStore.bankId,
-      nextMode,
-      bankStore.bank.questions,
-      sq,
-      so,
-    );
-  }
 }
 
 watch(
@@ -119,9 +123,7 @@ function toggleView() {
       class="flex items-end justify-between gap-[26px] max-sm:flex-col max-sm:items-start"
     >
       <div>
-        <div
-          class="text-2xl font-['Noto_Serif_SC','Source_Han_Serif_SC','Songti_SC','PingFang_SC','Microsoft_YaHei',serif]"
-        >
+        <div class="text-2xl">
           {{ isExam ? '考试模式' : '练习模式' }}
         </div>
         <div class="text-muted text-sm" v-if="isExam">
@@ -134,7 +136,7 @@ function toggleView() {
           {{ bank.questions.length }}
         </div>
       </div>
-      <div class="flex flex-wrap gap-[12px]">
+      <div class="flex flex-wrap gap-[8px] sm:gap-[12px]">
         <TimerChip
           v-if="isExam"
           :startAt="attempt.startedAt"
@@ -153,9 +155,13 @@ function toggleView() {
           @click="router.push('/review')"
           :icon-path="mdiClipboardTextOutline"
         >
-          查看回顾
+          查看小结
         </AppButton>
-        <AppButton v-if="isExam" @click="submitExam" :icon-path="mdiCheckCircleOutline">
+        <AppButton
+          v-if="isExam"
+          @click="submitExam"
+          :icon-path="mdiCheckCircleOutline"
+        >
           交卷
         </AppButton>
         <AppButton variant="ghost" @click="resetProgress" :icon-path="mdiBroom">
@@ -163,6 +169,7 @@ function toggleView() {
         </AppButton>
       </div>
     </section>
+
     <SingleQuestionView v-if="attempt.view === 'single'" />
     <FullPaperView v-else />
   </div>

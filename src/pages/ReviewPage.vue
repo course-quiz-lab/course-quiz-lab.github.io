@@ -87,7 +87,7 @@ function answerLabel(question: QuestionItem) {
 <template>
   <div v-if="bank && attempt" class="page">
     <section
-      class="bg-surface rounded-[18px] p-[26px] border border-[rgba(43,34,24,0.12)] grid gap-4"
+      class="bg-surface rounded-2xl p-[26px] max-sm:p-4 border border-[rgba(43,34,24,0.12)] grid gap-4"
     >
       <div class="text-sm text-muted tracking-wide uppercase">作答结果</div>
       <div v-if="!canReview" class="text-muted text-sm">
@@ -125,7 +125,7 @@ function answerLabel(question: QuestionItem) {
 
     <section
       v-if="canReview"
-      class="bg-surface rounded-[18px] p-[26px] border border-[rgba(43,34,24,0.12)]"
+      class="bg-surface rounded-2xl p-[26px] max-sm:p-4 border border-[rgba(43,34,24,0.12)]"
     >
       <div class="text-sm text-muted tracking-wide uppercase">
         错题与部分正确

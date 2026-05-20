@@ -25,6 +25,8 @@
   --danger: #b94a3c;
   --shadow: none;
   --sheen: rgba(255, 255, 255, 0.65);
+  --scrollbar-thumb: rgba(43, 34, 24, 0.2);
+  --scrollbar-track: transparent;
   --radius: 18px;
   --radius-sm: 12px;
   --space-1: 6px;
@@ -72,4 +74,5 @@ html[data-theme='dark'] {
   --warn: #f0b469;
   --danger: #e67b6f;
   --sheen: rgba(0, 0, 0, 0.35);
+  --scrollbar-thumb: rgba(230, 226, 217, 0.2);
 }

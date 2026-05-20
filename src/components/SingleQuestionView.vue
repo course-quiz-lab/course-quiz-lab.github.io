@@ -7,6 +7,7 @@ import { isMultiSelectType, type QuestionItem } from '../types/quiz';
 import AppButton from './ui/AppButton.vue';
 import QuestionCard from './QuestionCard.vue';
 import QuestionOptions from './QuestionOptions.vue';
+import QuizLayout from './QuizLayout.vue';
 
 const bankStore = useBankStore();
 const attemptStore = useAttemptStore();
@@ -71,6 +72,29 @@ const answerText = computed(() => {
   }
   return question.value.answer.join(' / ');
 });
+
+function answerStatusForQuestion(questionId: string) {
+  const base = questions.value.find((q) => q.id === questionId);
+  if (!base) return 'unanswered';
+  const resolved = attempt.value?.shuffledQuestions?.[questionId] ?? base;
+  const entry = attempt.value?.answers[questionId];
+  if (!entry) return 'unanswered';
+  if (attempt.value?.mode === 'exam' && !attempt.value?.submittedAt) {
+    return 'unanswered';
+  }
+  if (
+    isMultiSelectType(resolved.type) &&
+    attempt.value?.mode === 'practice' &&
+    !entry.submitted
+  ) {
+    return 'unanswered';
+  }
+  return evaluateStatus(resolved, entry.selected);
+}
+
+const allStatuses = computed(() =>
+  orderedQuestions.value.map((q) => answerStatusForQuestion(q.id)),
+);
 
 const optionsDisabled = computed(() => {
   if (!attempt.value || !answerState.value) return false;
@@ -162,57 +186,66 @@ function handleKeydown(e: KeyboardEvent) {
     tabindex="-1"
     @keydown="handleKeydown"
     v-if="question && attempt"
-    class="grid gap-[26px] outline-none"
+    class="outline-none"
   >
-    <QuestionCard
-      :question="question"
-      :index="attempt.currentIndex"
+    <QuizLayout
       :total="total"
-      :status="status"
-      :showFeedback="showFeedback"
-      :answerText="answerText"
+      :statuses="allStatuses"
+      :current-index="attempt.currentIndex"
+      @select="(index) => attemptStore.setCurrentIndex(index, total)"
     >
-      <QuestionOptions
+      <QuestionCard
         :question="question"
-        :modelValue="answerState?.selected ?? []"
-        :disabled="optionsDisabled"
-        @update:modelValue="handleSelect"
-      />
-      <div class="mt-[12px]" v-if="isMultiSelectType(question.type)">
-        <AppButton :disabled="optionsDisabled" @click="handleSubmit">
-          提交本题
+        :index="attempt.currentIndex"
+        :total="total"
+        :status="status"
+        :showFeedback="showFeedback"
+        :answerText="answerText"
+      >
+        <QuestionOptions
+          :question="question"
+          :modelValue="answerState?.selected ?? []"
+          :disabled="optionsDisabled"
+          @update:modelValue="handleSelect"
+        />
+        <div class="mt-[12px]" v-if="isMultiSelectType(question.type)">
+          <AppButton :disabled="optionsDisabled" @click="handleSubmit">
+            提交本题
+          </AppButton>
+        </div>
+      </QuestionCard>
+      <div class="flex justify-between items-center gap-[12px]">
+        <AppButton
+          variant="ghost"
+          :disabled="attempt.currentIndex === 0"
+          @click="attemptStore.prevQuestion(total)"
+        >
+          上一题
+        </AppButton>
+        <div class="text-muted text-sm">
+          进度 {{ attempt.currentIndex + 1 }} / {{ total }}
+        </div>
+        <AppButton
+          :disabled="attempt.currentIndex >= total - 1"
+          @click="attemptStore.nextQuestion(total)"
+        >
+          下一题
         </AppButton>
       </div>
-    </QuestionCard>
-    <div class="flex justify-between items-center gap-[12px]">
-      <AppButton
-        variant="ghost"
-        :disabled="attempt.currentIndex === 0"
-        @click="attemptStore.prevQuestion(total)"
+      <div
+        class="flex flex-wrap justify-center items-center gap-1 text-xs text-muted p-2 rounded-xl bg-surface-soft max-sm:hidden"
       >
-        上一题
-      </AppButton>
-      <div class="text-muted text-sm">
-        进度 {{ attempt.currentIndex + 1 }} / {{ total }}
+        <kbd class="kbd">1</kbd><kbd class="kbd">2</kbd>…<kbd class="kbd"
+          >9</kbd
+        >
+        选择选项
+        <span class="mx-[2px] opacity-50">·</span>
+        <kbd class="kbd">空格</kbd> / <kbd class="kbd">Enter</kbd> 提交/下一题
+        <span class="mx-[2px] opacity-50">·</span>
+        <kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd><kbd class="kbd">←</kbd
+        ><kbd class="kbd">→</kbd> 切换题目
       </div>
-      <AppButton
-        :disabled="attempt.currentIndex >= total - 1"
-        @click="attemptStore.nextQuestion(total)"
-      >
-        下一题
-      </AppButton>
-    </div>
-    <div
-      class="flex flex-wrap justify-center items-center gap-1 text-xs text-muted p-2 rounded-xl bg-surface-soft max-sm:hidden"
-    >
-      <kbd class="kbd">1</kbd><kbd class="kbd">2</kbd>…<kbd class="kbd">9</kbd>
-      选择选项
-      <span class="mx-[2px] opacity-50">·</span>
-      <kbd class="kbd">空格</kbd> / <kbd class="kbd">Enter</kbd> 提交/下一题
-      <span class="mx-[2px] opacity-50">·</span>
-      <kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd><kbd class="kbd">←</kbd
-      ><kbd class="kbd">→</kbd> 切换题目
-    </div>
+    </QuizLayout>
   </div>
 </template>
 

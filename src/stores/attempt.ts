@@ -6,7 +6,7 @@ import type {
   UserAnswer,
   ViewMode,
 } from '../types/quiz';
-import { clearAttempt, loadAttempt, saveAttempt } from '../utils/idb';
+import { loadAttempt, saveAttempt } from '../utils/idb';
 
 interface AttemptStoreState {
   attempt: AttemptState | null;
@@ -49,8 +49,9 @@ export const useAttemptStore = defineStore('attempt', {
     isSubmitted: (state) => !!state.attempt?.submittedAt,
   },
   actions: {
-    async loadSavedAttempt(bankId: string, mode: Mode) {
-      const saved = await loadAttempt(bankId, mode);
+    /** Load the latest saved attempt. Returns true if found. */
+    async loadSavedAttempt() {
+      const saved = await loadAttempt();
       if (saved) {
         this.attempt = saved;
         return true;
@@ -107,7 +108,6 @@ export const useAttemptStore = defineStore('attempt', {
       await saveAttempt(attempt);
     },
     async resetAttempt(bankId: string, mode: Mode, questions: QuestionItem[]) {
-      await clearAttempt(bankId, mode);
       // Preserve shuffle order from current attempt
       const existingOrder = this.attempt?.questionOrder;
       const existingShuffledQuestions = this.attempt?.shuffledQuestions;

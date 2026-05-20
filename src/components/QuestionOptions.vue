@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { isMultiSelectType, type OptionItem, type QuestionItem } from '../types/quiz';
+import {
+  isMultiSelectType,
+  type OptionItem,
+  type QuestionItem,
+} from '../types/quiz';
 
 const props = defineProps<{
   question: QuestionItem;
@@ -32,7 +36,7 @@ function updateSelection(option: OptionItem, checked: boolean) {
     <label
       v-for="option in question.options"
       :key="option.id"
-      class="grid grid-cols-[28px_1fr] gap-[12px] items-center p-[12px] p-4 rounded-xl border border-transparent bg-surface-option cursor-pointer transition-all duration-200"
+      class="grid grid-cols-[28px_1fr] gap-[12px] items-center p-[12px] p-4 rounded-xl border border-transparent bg-surface-option cursor-pointer transition-all duration-200 text-base max-sm:text-sm"
       :class="{
         '!border-[rgba(47,111,107,0.5)] !bg-[rgba(47,111,107,0.08)]':
           modelValue.includes(option.id),

@@ -27,9 +27,13 @@ async function bootstrap() {
           : '刷题小站';
     document.title = title;
 
-    if (['quiz', 'review'].includes(String(to.name)) && !bankStore.hasBank) {
+    if (
+      ['quiz', 'review'].includes(String(to.name)) &&
+      !bankStore.hasBank
+    ) {
       return { name: 'home' };
     }
+    // Allow import/banks/configure routes without a bank loaded
 
     return true;
   });

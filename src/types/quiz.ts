@@ -62,6 +62,13 @@ export interface AttemptState {
   shuffledQuestions?: Record<string, QuestionItem>;
 }
 
+/** Lightweight metadata entry stored in `bank-metas` for listing without loading full bank */
+export interface BankMetaEntry {
+  bankId: string;
+  meta: BankMeta;
+  importedAt: number;
+}
+
 export function isMultiSelectType(type: QuestionType) {
   return type === 'multiple' || type === 'indeterminate';
 }

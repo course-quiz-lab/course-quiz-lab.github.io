@@ -1,21 +1,15 @@
 <script setup lang="ts">
+import { mdiArrowLeft, mdiWeatherNight, mdiWeatherSunny } from '@mdi/js';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { useBankStore } from '../stores/bank';
-import { mdiArrowLeft, mdiWeatherNight, mdiWeatherSunny } from '@mdi/js';
 import AppButton from './ui/AppButton.vue';
 import AppIcon from './ui/AppIcon.vue';
 
 const route = useRoute();
-const bankStore = useBankStore();
 
 const theme = ref<'light' | 'dark'>('light');
 const THEME_KEY = 'quiz-theme';
 
-const bankTitle = computed(
-  () => bankStore.bank?.meta.course?.name ?? '未导入题库',
-);
-const bankCount = computed(() => bankStore.bank?.questions.length ?? 0);
 const isHome = computed(() => route.name === 'home');
 const themeLabel = computed(() => (theme.value === 'dark' ? '浅色' : '深色'));
 
@@ -79,6 +73,17 @@ onMounted(() => {
     </header>
     <div v-else class="flex items-center justify-between mb-5">
       <AppButton
+        v-if="route.name !== 'quiz'"
+        @click="$router.back()"
+        variant="ghost"
+        class="px-3 py-2 text-sm flex items-center gap-2"
+        :icon-path="mdiArrowLeft"
+      >
+        返回上页
+      </AppButton>
+
+      <AppButton
+        v-else
         to="/"
         variant="ghost"
         class="px-3 py-2 text-sm flex items-center gap-2"
@@ -86,6 +91,7 @@ onMounted(() => {
       >
         返回主页
       </AppButton>
+
       <div class="flex items-center gap-3">
         <AppButton
           variant="ghost"
@@ -98,13 +104,6 @@ onMounted(() => {
             :size="18"
           />
         </AppButton>
-
-        <div
-          class="px-3 py-1.5 rounded-[12px] bg-surface-soft border border-[color:var(--border)] text-right max-sm:text-left"
-        >
-          <div class="text-sm">{{ bankTitle }}</div>
-          <div class="text-xs text-muted">共 {{ bankCount }} 题</div>
-        </div>
       </div>
     </div>
     <main>
