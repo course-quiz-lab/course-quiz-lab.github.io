@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { OptionItem, QuestionItem } from '../types/quiz';
+import { isMultiSelectType, type OptionItem, type QuestionItem } from '../types/quiz';
 
 const props = defineProps<{
   question: QuestionItem;
@@ -9,7 +9,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ (e: 'update:modelValue', value: string[]): void }>();
 
-const isMultiple = computed(() => props.question.type === 'multiple');
+const isMultiple = computed(() => isMultiSelectType(props.question.type));
 
 function updateSelection(option: OptionItem, checked: boolean) {
   if (props.disabled) return;
@@ -50,7 +50,7 @@ function updateSelection(option: OptionItem, checked: boolean) {
         "
       />
       <span
-        class="w-[26px] h-[26px] rounded-full bg-surface flex items-center justify-center font-semibold text-sm border border-[rgba(43,34,24,0.12)] text-muted"
+        class="select-none w-[26px] h-[26px] rounded-full bg-surface flex items-center justify-center font-semibold text-sm border border-[rgba(43,34,24,0.12)] text-muted"
         :class="{
           '!bg-brand !text-white !border-brand': modelValue.includes(option.id),
         }"

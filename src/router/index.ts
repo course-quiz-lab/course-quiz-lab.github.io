@@ -1,7 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 import HomePage from '../pages/HomePage.vue';
-import PracticePage from '../pages/PracticePage.vue';
-import ExamPage from '../pages/ExamPage.vue';
+import QuizPage from '../pages/QuizPage.vue';
 import ReviewPage from '../pages/ReviewPage.vue';
 
 const router = createRouter({
@@ -13,16 +12,10 @@ const router = createRouter({
       component: HomePage,
     },
     {
-      path: '/practice',
-      name: 'practice',
-      component: PracticePage,
-      meta: { title: '练习模式' },
-    },
-    {
-      path: '/exam',
-      name: 'exam',
-      component: ExamPage,
-      meta: { title: '考试模式' },
+      name: 'quiz',
+      path: '/:mode(practice|exam)',
+      component: QuizPage,
+      meta: { title: '答题模式' },
     },
     {
       path: '/review',

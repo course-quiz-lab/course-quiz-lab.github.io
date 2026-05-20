@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { mdiCheck, mdiClose } from '@mdi/js';
+import AppIcon from './ui/AppIcon.vue';
 
 const props = defineProps<{
   status: 'correct' | 'partial' | 'wrong' | 'unanswered' | 'answered';
@@ -12,6 +14,17 @@ const labelMap: Record<string, string> = {
   unanswered: '未作答',
   answered: '已作答',
 };
+
+const iconMap: Record<string, string> = {
+  correct: mdiCheck,
+  partial: mdiCheck,
+  wrong: mdiClose,
+};
+
+const showIcon = computed(() =>
+  ['correct', 'partial', 'wrong'].includes(props.status),
+);
+const showPill = computed(() => props.status !== 'unanswered');
 
 const statusClass = computed(() => {
   const base =
@@ -28,5 +41,8 @@ const statusClass = computed(() => {
 </script>
 
 <template>
-  <span :class="statusClass">{{ labelMap[props.status] }}</span>
+  <span v-if="showPill" :class="statusClass" :title="labelMap[props.status]">
+    <AppIcon v-if="showIcon" :path="iconMap[props.status]" :size="16" />
+    <span class="ml-2">{{ labelMap[props.status] }}</span>
+  </span>
 </template>

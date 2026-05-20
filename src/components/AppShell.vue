@@ -12,7 +12,9 @@ const bankStore = useBankStore();
 const theme = ref<'light' | 'dark'>('light');
 const THEME_KEY = 'quiz-theme';
 
-const bankTitle = computed(() => bankStore.bank?.meta.title ?? '未导入题库');
+const bankTitle = computed(
+  () => bankStore.bank?.meta.course?.name ?? '未导入题库',
+);
 const bankCount = computed(() => bankStore.bank?.questions.length ?? 0);
 const isHome = computed(() => route.name === 'home');
 const themeLabel = computed(() => (theme.value === 'dark' ? '浅色' : '深色'));

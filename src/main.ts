@@ -17,13 +17,17 @@ async function bootstrap() {
   app.use(router);
 
   router.beforeEach((to) => {
-    const title = to.meta?.title ? `刷题小站 · ${to.meta.title}` : '刷题小站';
+    const isExam = to.name === 'quiz' && to.params.mode === 'exam';
+    const titleSuffix = isExam ? '考试模式' : '练习模式';
+    const title =
+      to.name === 'quiz'
+        ? `刷题小站 · ${titleSuffix}`
+        : to.meta?.title
+          ? `刷题小站 · ${to.meta.title}`
+          : '刷题小站';
     document.title = title;
 
-    if (
-      ['practice', 'exam', 'review'].includes(String(to.name)) &&
-      !bankStore.hasBank
-    ) {
+    if (['quiz', 'review'].includes(String(to.name)) && !bankStore.hasBank) {
       return { name: 'home' };
     }
 

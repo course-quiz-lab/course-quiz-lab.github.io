@@ -1,4 +1,4 @@
-import type { QuestionItem } from '../types/quiz';
+import { isMultiSelectType, type QuestionItem } from '../types/quiz';
 
 export type AnswerStatus = 'correct' | 'partial' | 'wrong' | 'unanswered';
 
@@ -9,7 +9,7 @@ export function evaluateStatus(
   if (!selected || selected.length === 0) return 'unanswered';
 
   const correct = question.answer;
-  if (question.type === 'multiple') {
+  if (isMultiSelectType(question.type)) {
     // const selectedSet = new Set(selected);
     const correctSet = new Set(correct);
     const isSubset = selected.every((value) => correctSet.has(value));

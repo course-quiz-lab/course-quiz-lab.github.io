@@ -117,7 +117,7 @@ async function confirmImport() {
           让刷题更清晰、更从容
         </h1>
         <p class="text-muted mb-[26px]">
-          支持单选、多选、判断三种题型；练习与考试模式分离；可切换单题与整卷视图。
+          支持单选、多选、判断、不定项四种题型；练习与考试模式分离；可切换单题与整卷视图。
         </p>
         <div class="flex flex-wrap gap-[12px]">
           <AppButton
@@ -134,18 +134,21 @@ async function confirmImport() {
         <div
           class="text-[22px] font-['Noto_Serif_SC','Source_Han_Serif_SC','Songti_SC','PingFang_SC','Microsoft_YaHei',serif]"
         >
-          {{ bankMeta?.title ?? '尚未导入' }}
+          {{ bankMeta?.course?.name ?? '尚未导入' }}
         </div>
         <div class="flex gap-[12px] text-muted text-sm">
-          <span>{{ bankMeta?.subject ?? '未标注科目' }}</span>
-          <span>{{ bankMeta?.total ?? 0 }} 题</span>
+          <code>{{ bankMeta?.course?.code ?? '未标注课程代码' }}</code>
+          <span>{{
+            bankMeta?.author ? 'by ' + bankMeta?.author : '未标注作者'
+          }}</span>
+          <span>共 {{ bankMeta?.total ?? 0 }} 题</span>
         </div>
       </AppCard>
     </section>
     <AppCard id="import-section">
       <div class="text-sm text-muted tracking-wide uppercase">导入题库</div>
       <p class="text-muted text-sm mb-3">
-        支持 JSON 与 XLSX 格式，单题库导入。题型仅限单选、多选、判断。
+        支持 JSON 与 XLSX 格式，单题库导入。题型仅限单选、多选、判断、不定项。
       </p>
       <div
         class="inline-flex flex-wrap gap-2 border border-[color:var(--border)] rounded-full p-1 mb-4"
@@ -203,22 +206,52 @@ async function confirmImport() {
           class="mt-3 bg-surface-code rounded-xl p-4 font-['Cascadia_Mono','Courier_New',monospace] text-xs overflow-x-auto"
         >
 {
-  "meta": { "title": "示例题库", "subject": "高等数学" },
+  "metadata": {
+    "course": {
+      "code": "MATH101",
+      "name": "高等数学",
+      "link": "https://example.com/course/math101"
+    },
+    "author": "张三",
+    "source": "期中题库",
+    "publishedAt": "2026-05-20T08:00:00Z"
+  },
   "questions": [
     {
       "id": "q-1",
       "type": "single",
       "stem": "题干...",
-      "options": ["选项A", "选项B"],
-      "answer": "A",
+      "options": ["选项A", "选项B", "选项C"],
+      "answer": 0,
       "analysis": "解析...",
-      "difficulty": 2
+      "difficulty": "中等"
+    },
+    {
+      "id": "q-2",
+      "type": "multiple",
+      "stem": "题干...",
+      "options": ["选项A", "选项B", "选项C"],
+      "answer": [0, 2]
+    },
+    {
+      "id": "q-3",
+      "type": "judge",
+      "stem": "题干...",
+      "answer": true
+    },
+    {
+      "id": "q-4",
+      "type": "indeterminate",
+      "stem": "题干...",
+      "options": ["选项A", "选项B", "选项C"],
+      "answer": [0, 1]
     }
   ]
 }
         </pre>
         <p class="text-muted text-sm mt-2">
-          多选题 answer 可为数组；判断题 answer 支持 true/false 或 "正确/错误"。
+          选项使用数组；答案使用选项索引（从 0 开始）；多选/不定项 answer 为数组；
+          判断题 answer 为 true/false。选项不超过 26 个时显示 A-Z，超过则显示数字。
         </p>
       </details>
       <div
@@ -263,7 +296,8 @@ async function confirmImport() {
       >
         <div class="font-semibold mb-3">题库就绪</div>
         <p>
-          题库：{{ preview.meta.title }} · {{ preview.questions.length }} 题
+          题库：{{ preview.meta.course.name }} ·
+          {{ preview.questions.length }} 题
         </p>
       </div>
       <div v-if="preview" class="mt-3">

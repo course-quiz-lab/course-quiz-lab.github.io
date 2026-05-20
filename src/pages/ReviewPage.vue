@@ -6,6 +6,7 @@ import AppButton from '../components/ui/AppButton.vue';
 import { useAttemptStore } from '../stores/attempt';
 import { useBankStore } from '../stores/bank';
 import { evaluateStatus } from '../utils/scoring';
+import type { QuestionItem, QuestionType } from '../types/quiz';
 
 const bankStore = useBankStore();
 const attemptStore = useAttemptStore();
@@ -47,6 +48,22 @@ const canReview = computed(() => {
   if (attempt.value.mode === 'practice') return true;
   return !!attempt.value.submittedAt;
 });
+
+function typeLabel(type: QuestionType) {
+  if (type === 'single') return '单选';
+  if (type === 'multiple') return '多选';
+  if (type === 'indeterminate') return '不定项';
+  return '判断';
+}
+
+function answerLabel(question: QuestionItem) {
+  if (question.type === 'judge') {
+    return question.answer
+      .map((id) => (id === 'T' ? '正确' : '错误'))
+      .join(' / ');
+  }
+  return question.answer.join(' / ');
+}
 </script>
 
 <template>
@@ -109,18 +126,12 @@ const canReview = computed(() => {
             <StatusPill :status="statusMap[question.id]" />
             <span
               class="bg-surface-chip rounded-full px-2.5 py-1 text-xs text-muted"
-              >题型：{{
-                question.type === 'single'
-                  ? '单选'
-                  : question.type === 'multiple'
-                    ? '多选'
-                    : '判断'
-              }}</span
+              >题型：{{ typeLabel(question.type) }}</span
             >
             <span
               class="bg-surface-chip rounded-full px-2.5 py-1 text-xs text-muted"
             >
-              参考答案：{{ question.answer.join(' / ') }}
+              参考答案：{{ answerLabel(question) }}
             </span>
           </div>
         </li>

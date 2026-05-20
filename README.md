@@ -22,32 +22,45 @@ pnpm preview
 
 ```json
 {
-    "meta": {
-        "title": "示例题库",
-        "subject": "高等数学"
+    "metadata": {
+        "course": {
+            "code": "MATH101",
+            "name": "高等数学",
+            "link": "https://example.com/course/math101"
+        },
+        "author": "张三",
+        "source": "期中题库",
+        "publishedAt": "2026-05-20T08:00:00Z"
     },
     "questions": [
         {
             "id": "q-1",
             "type": "single",
             "stem": "题干...",
-            "options": ["选项A", "选项B", "选项C", "选项D"],
-            "answer": "A",
+            "options": ["选项1", "选项2", "选项3", "选项4"],
+            "answer": 0,
             "analysis": "解析...",
-            "difficulty": 2
+            "difficulty": "中等"
         },
         {
             "id": "q-2",
             "type": "multiple",
             "stem": "题干...",
-            "options": ["选项A", "选项B", "选项C"],
-            "answer": ["A", "C"]
+            "options":["选项1", "选项2", "选项3", "选项4"],
+            "answer": [0, 2]
         },
         {
             "id": "q-3",
             "type": "judge",
             "stem": "题干...",
             "answer": true
+        },
+        {
+            "id": "q-4",
+            "type": "indeterminate",
+            "stem": "题干...",
+            "options":["选项1", "选项2", "选项3", "选项4"],
+            "answer": [0, 1]
         }
     ]
 }
@@ -55,9 +68,12 @@ pnpm preview
 
 说明：
 
-- `type` 支持 `single` / `multiple` / `judge`。
-- `options` 可为字符串数组，也可为对象数组（含 `id` 与 `text`）。
-- 判断题 `answer` 支持 `true/false` 或 “正确/错误”。
+- `type` 支持 `single` / `multiple` / `judge` / `indeterminate`。
+- `metadata.course.code` 与 `metadata.course.name` 必填，`metadata.author` 必填。
+- `options` 使用数组（单选/多选/不定项必填）。
+- `answer` 使用选项索引（从 0 开始），多选/不定项为数组。
+- 判断题 `answer` 使用 `true/false`。
+- 选项不超过 26 个时显示 A-Z，超过则显示数字。
 - 当题目数超过 5000，会提示性能提醒。
 
 ## 使用说明

@@ -1,9 +1,10 @@
-import type {
-  Bank,
-  BankMeta,
-  OptionItem,
-  QuestionItem,
-  QuestionType,
+import {
+  isMultiSelectType,
+  type Bank,
+  type BankMeta,
+  type OptionItem,
+  type QuestionItem,
+  type QuestionType,
 } from '../types/quiz';
 import { simpleHash } from './hash';
 
@@ -13,11 +14,12 @@ export interface ValidationResult {
   warning?: string;
 }
 
-const DEFAULT_JUDGE_OPTIONS: OptionItem[] = [
-  { id: 'T', text: '正确' },
-  { id: 'F', text: '错误' },
+const DEFAULT_BOOLEAN_OPTIONS: OptionItem[] = [
+  { id: 'T', text: '正确', index: 0 },
+  { id: 'F', text: '错误', index: 1 },
 ];
 
+const ANSWER_SPLIT_RE = /[,、;]/;
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 function normalizeType(raw: unknown): QuestionType | null {
@@ -27,8 +29,14 @@ function normalizeType(raw: unknown): QuestionType | null {
     return 'single';
   if (['multiple', 'multi', 'mc', 'checkbox'].includes(value))
     return 'multiple';
-  if (['judge', 'true-false', 'tf', 'boolean'].includes(value)) return 'judge';
+  if (['indeterminate', 'multi-any'].includes(value)) return 'indeterminate';
+  if (['boolean', 'judge', 'true-false', 'tf'].includes(value)) return 'judge';
   return null;
+}
+
+function buildOptionLabel(index: number, total: number) {
+  if (total > LETTERS.length) return String(index + 1);
+  return LETTERS[index] ?? String(index + 1);
 }
 
 function normalizeOptionList(
@@ -36,36 +44,40 @@ function normalizeOptionList(
   type: QuestionType,
 ): OptionItem[] | null {
   if (type === 'judge') {
-    return DEFAULT_JUDGE_OPTIONS;
+    return DEFAULT_BOOLEAN_OPTIONS;
   }
   if (!Array.isArray(raw)) return null;
   if (raw.length < 2) return null;
+
   const items: OptionItem[] = [];
-  raw.forEach((item, index) => {
-    if (typeof item === 'string') {
-      const id = LETTERS[index] ?? `O${index + 1}`;
-      items.push({ id, text: item });
-      return;
-    }
-    if (typeof item === 'object' && item) {
-      const candidate = item as {
-        id?: unknown;
-        label?: unknown;
-        text?: unknown;
-      };
-      const id = String(
-        candidate.id ?? candidate.label ?? LETTERS[index] ?? `O${index + 1}`,
-      );
-      const text = String(
-        candidate.text ?? candidate.label ?? candidate.id ?? '',
-      );
-      items.push({ id, text });
-    }
+  raw.forEach((value, index) => {
+    if (typeof value !== 'string' || !value.trim()) return;
+    const label = buildOptionLabel(index, raw.length);
+    items.push({ id: label, text: value.trim(), index });
   });
+
   return items.length >= 2 ? items : null;
 }
 
-function normalizeAnswer(raw: unknown, type: QuestionType): string[] | null {
+function normalizeAnswerIndex(raw: unknown) {
+  if (raw === undefined || raw === null) return Number.NaN;
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : Number.NaN;
+  const text = String(raw).trim();
+  if (!text) return Number.NaN;
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+function indexToLabel(index: number, total: number) {
+  if (!Number.isInteger(index) || index < 0 || index >= total) return '';
+  return buildOptionLabel(index, total);
+}
+
+function normalizeAnswer(
+  raw: unknown,
+  type: QuestionType,
+  optionsCount: number,
+): string[] | null {
   if (raw === undefined || raw === null) return null;
   if (type === 'judge') {
     if (typeof raw === 'boolean') return [raw ? 'T' : 'F'];
@@ -74,22 +86,30 @@ function normalizeAnswer(raw: unknown, type: QuestionType): string[] | null {
     if (['f', 'false', '0', '错误', '否', '错'].includes(value)) return ['F'];
     return null;
   }
-  if (Array.isArray(raw)) {
-    return raw.map((item) => String(item));
+  if (type === 'single') {
+    const index = normalizeAnswerIndex(raw);
+    const label = indexToLabel(index, optionsCount);
+    return label ? [label] : null;
   }
-  const value = String(raw);
-  if (value.includes(',') || value.includes('、') || value.includes(';')) {
-    return value
-      .split(/[,、;]/)
-      .map((item) => item.trim())
+  if (Array.isArray(raw)) {
+    const values = raw
+      .map((item) => indexToLabel(normalizeAnswerIndex(item), optionsCount))
       .filter(Boolean);
+    return values.length ? values : null;
+  }
+  const index = normalizeAnswerIndex(raw);
+  const value = indexToLabel(index, optionsCount);
+  if (!value) return null;
+  if (ANSWER_SPLIT_RE.test(value)) {
+    return [value];
   }
   return [value];
 }
 
 export function buildBankId(bank: Bank) {
   if (bank.meta.id) return bank.meta.id;
-  const payload = `${bank.meta.title}:${bank.questions.length}`;
+  const courseId = bank.meta.course.code || bank.meta.course.name;
+  const payload = `${courseId}:${bank.meta.author}:${bank.questions.length}`;
   return `bank-${simpleHash(payload)}`;
 }
 
@@ -100,18 +120,32 @@ export function validateBankSchema(raw: unknown): ValidationResult {
   }
 
   const input = raw as Record<string, unknown>;
-  const metaInput = (input.meta ?? input.metadata ?? {}) as Record<
+  if (!input.metadata || typeof input.metadata !== 'object') {
+    errors.push('元数据 metadata 缺失或格式不正确。');
+  }
+
+  const metaInput = (input.metadata ?? input.meta ?? {}) as Record<
     string,
     unknown
   >;
-  const title = String(metaInput.title ?? metaInput.name ?? '');
-  if (!title) {
-    errors.push('题库缺少标题。');
+  const courseInput = (metaInput.course ?? {}) as Record<string, unknown>;
+  const courseCode = String(courseInput.code ?? '').trim();
+  const courseName = String(courseInput.name ?? '').trim();
+  const author = String(metaInput.author ?? '').trim();
+
+  if (!courseCode) {
+    errors.push('元数据缺少课程代码。');
+  }
+  if (!courseName) {
+    errors.push('元数据缺少课程名称。');
+  }
+  if (!author) {
+    errors.push('元数据缺少作者。');
   }
 
-  const questionsInput = input.questions ?? input.items ?? input.list;
+  const questionsInput = input.questions;
   if (!Array.isArray(questionsInput) || questionsInput.length === 0) {
-    errors.push('题目列表为空或格式不正确。');
+    errors.push('题目列表 questions 为空或格式不正确。');
   }
 
   const questions: QuestionItem[] = [];
@@ -127,15 +161,14 @@ export function validateBankSchema(raw: unknown): ValidationResult {
         errors.push(`第 ${index + 1} 题：题目类型无效。`);
         return;
       }
-      const stem = String(item.stem ?? item.title ?? item.question ?? '');
+      const stem = String(
+        item.stem ?? item.title ?? item.question ?? '',
+      ).trim();
       if (!stem) {
         errors.push(`第 ${index + 1} 题：题干为空。`);
         return;
       }
-      const options = normalizeOptionList(
-        item.options ?? item.choices ?? item.optionList,
-        type,
-      );
+      const options = normalizeOptionList(item.options, type);
       if (!options) {
         errors.push(`第 ${index + 1} 题：选项格式不正确。`);
         return;
@@ -143,19 +176,27 @@ export function validateBankSchema(raw: unknown): ValidationResult {
       const answer = normalizeAnswer(
         item.answer ?? item.answers ?? item.correct,
         type,
+        options.length,
       );
       if (!answer || answer.length === 0) {
         errors.push(`第 ${index + 1} 题：答案缺失或无效。`);
         return;
       }
-      if (type === 'single' && answer.length !== 1) {
-        errors.push(`第 ${index + 1} 题：单选题答案只能有一个。`);
+      if (!isMultiSelectType(type) && answer.length !== 1) {
+        errors.push(`第 ${index + 1} 题：答案只能有一个。`);
         return;
+      }
+      if (isMultiSelectType(type)) {
+        const unique = new Set(answer);
+        if (unique.size !== answer.length) {
+          errors.push(`第 ${index + 1} 题：答案存在重复选项。`);
+          return;
+        }
       }
       const analysis = item.analysis ?? item.explanation;
       const difficultyRaw = item.difficulty ?? item.level;
       const difficulty =
-        difficultyRaw === undefined ? undefined : Number(difficultyRaw);
+        difficultyRaw === undefined ? undefined : String(difficultyRaw).trim();
       const id = String(item.id ?? `q-${index + 1}`);
 
       const optionIds = new Set(options.map((option) => option.id));
@@ -174,7 +215,7 @@ export function validateBankSchema(raw: unknown): ValidationResult {
         options,
         answer: answer.map((value) => value.trim()),
         analysis: analysis ? String(analysis) : undefined,
-        difficulty: Number.isFinite(difficulty) ? difficulty : undefined,
+        difficulty: difficulty || undefined,
       });
     });
   }
@@ -183,16 +224,32 @@ export function validateBankSchema(raw: unknown): ValidationResult {
     return { errors };
   }
 
+  const courseLinkRaw = courseInput.link;
+  const courseLink =
+    typeof courseLinkRaw === 'string' && courseLinkRaw.trim()
+      ? courseLinkRaw.trim()
+      : undefined;
+  const sourceRaw = metaInput.source;
+  const source =
+    typeof sourceRaw === 'string' && sourceRaw.trim()
+      ? sourceRaw.trim()
+      : undefined;
+  const publishedRaw = metaInput.publishedAt;
+  const publishedAt =
+    typeof publishedRaw === 'string' && publishedRaw.trim()
+      ? publishedRaw.trim()
+      : undefined;
+
   const meta: BankMeta = {
     id: metaInput.id ? String(metaInput.id) : undefined,
-    title,
-    description: metaInput.description
-      ? String(metaInput.description)
-      : undefined,
-    subject: metaInput.subject ? String(metaInput.subject) : undefined,
-    version: metaInput.version ? String(metaInput.version) : undefined,
-    source: metaInput.source ? String(metaInput.source) : undefined,
-    createdAt: metaInput.createdAt ? String(metaInput.createdAt) : undefined,
+    course: {
+      code: courseCode,
+      name: courseName,
+      link: courseLink,
+    },
+    author,
+    source,
+    publishedAt,
     total: questions.length,
   };
 

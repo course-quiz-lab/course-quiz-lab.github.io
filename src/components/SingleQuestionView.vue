@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useAttemptStore } from '../stores/attempt';
 import { useBankStore } from '../stores/bank';
 import { evaluateStatus } from '../utils/scoring';
+import { isMultiSelectType } from '../types/quiz';
 import AppButton from './ui/AppButton.vue';
 import QuestionCard from './QuestionCard.vue';
 import QuestionOptions from './QuestionOptions.vue';
@@ -37,12 +38,12 @@ const status = computed(() => {
 
 const answerText = computed(() => {
   if (!question.value) return '';
-  return question.value.answer
-    .map(
-      (id) =>
-        question.value?.options.find((option) => option.id === id)?.text ?? id,
-    )
-    .join(' / ');
+  if (question.value.type === 'judge') {
+    return question.value.answer
+      .map((id) => (id === 'T' ? '正确' : '错误'))
+      .join(' / ');
+  }
+  return question.value.answer.join(' / ');
 });
 
 const optionsDisabled = computed(() => {
@@ -54,11 +55,14 @@ const optionsDisabled = computed(() => {
 async function handleSelect(selected: string[]) {
   if (!question.value || !attempt.value) return;
   await attemptStore.updateSelection(question.value.id, selected);
-  if (attempt.value.mode === 'practice' && question.value.type !== 'multiple') {
+  if (
+    attempt.value.mode === 'practice' &&
+    !isMultiSelectType(question.value.type)
+  ) {
     await attemptStore.submitQuestion(question.value.id);
   }
   if (
-    question.value.type !== 'multiple' &&
+    !isMultiSelectType(question.value.type) &&
     attempt.value.currentIndex < total.value - 1
   ) {
     await attemptStore.nextQuestion(total.value);
@@ -87,7 +91,7 @@ async function handleSubmit() {
         :disabled="optionsDisabled"
         @update:modelValue="handleSelect"
       />
-      <div class="mt-[12px]" v-if="question.type === 'multiple'">
+      <div class="mt-[12px]" v-if="isMultiSelectType(question.type)">
         <AppButton :disabled="optionsDisabled" @click="handleSubmit">
           提交本题
         </AppButton>

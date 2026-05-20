@@ -1,21 +1,30 @@
-export type QuestionType = 'single' | 'multiple' | 'judge';
+export type QuestionType =
+  | 'single'
+  | 'multiple'
+  | 'judge'
+  | 'indeterminate';
 export type Mode = 'practice' | 'exam';
 export type ViewMode = 'single' | 'paper';
 
+export interface CourseMeta {
+  code: string;
+  name: string;
+  link?: string;
+}
+
 export interface BankMeta {
   id?: string;
-  title: string;
-  description?: string;
-  subject?: string;
-  version?: string;
+  course: CourseMeta;
+  author: string;
   source?: string;
-  createdAt?: string;
+  publishedAt?: string;
   total?: number;
 }
 
 export interface OptionItem {
   id: string;
   text: string;
+  index: number;
 }
 
 export interface QuestionItem {
@@ -25,7 +34,7 @@ export interface QuestionItem {
   options: OptionItem[];
   answer: string[];
   analysis?: string;
-  difficulty?: number;
+  difficulty?: string;
 }
 
 export interface Bank {
@@ -48,4 +57,8 @@ export interface AttemptState {
   startedAt: number;
   submittedAt?: number;
   answers: Record<string, UserAnswer>;
+}
+
+export function isMultiSelectType(type: QuestionType) {
+  return type === 'multiple' || type === 'indeterminate';
 }

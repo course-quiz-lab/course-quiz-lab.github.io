@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useAttemptStore } from '../stores/attempt';
 import { useBankStore } from '../stores/bank';
 import { evaluateStatus } from '../utils/scoring';
+import { isMultiSelectType, type QuestionType } from '../types/quiz';
 import AppButton from './ui/AppButton.vue';
 import QuestionCard from './QuestionCard.vue';
 import QuestionOptions from './QuestionOptions.vue';
@@ -28,11 +29,12 @@ function answerStatus(questionId: string) {
 function answerText(questionId: string) {
   const question = questions.value.find((item) => item.id === questionId);
   if (!question) return '';
-  return question.answer
-    .map(
-      (id) => question.options.find((option) => option.id === id)?.text ?? id,
-    )
-    .join(' / ');
+  if (question.type === 'judge') {
+    return question.answer
+      .map((id) => (id === 'T' ? '正确' : '错误'))
+      .join(' / ');
+  }
+  return question.answer.join(' / ');
 }
 
 function showFeedback(questionId: string) {
@@ -53,10 +55,10 @@ function optionsDisabled(questionId: string) {
 async function handleSelect(
   questionId: string,
   selected: string[],
-  type: string,
+  type: QuestionType,
 ) {
   await attemptStore.updateSelection(questionId, selected);
-  if (attempt.value?.mode === 'practice' && type !== 'multiple') {
+  if (attempt.value?.mode === 'practice' && !isMultiSelectType(type)) {
     await attemptStore.submitQuestion(questionId);
   }
 }
@@ -89,9 +91,9 @@ function gridItemClass(status: string) {
 <template>
   <div
     v-if="bank && attempt"
-    class="grid gap-[26px] grid-cols-[minmax(0,1fr)_220px] max-lg:!grid-cols-1"
+    class="grid gap-[26px] grid-cols-[minmax(0,1fr)_260px] max-lg:!grid-cols-1"
   >
-    <div class="grid gap-4">
+    <div class="grid gap-4 max-lg:order-last">
       <div
         v-for="(question, index) in questions"
         :key="question.id"
@@ -113,7 +115,7 @@ function gridItemClass(status: string) {
               (selected) => handleSelect(question.id, selected, question.type)
             "
           />
-          <div class="mt-[12px]" v-if="question.type === 'multiple'">
+          <div class="mt-[12px]" v-if="isMultiSelectType(question.type)">
             <AppButton
               :disabled="optionsDisabled(question.id)"
               @click="handleSubmit(question.id)"
@@ -124,11 +126,12 @@ function gridItemClass(status: string) {
         </QuestionCard>
       </div>
     </div>
+
     <aside
-      class="sticky top-[120px] p-4 rounded-[18px] bg-surface border border-[rgba(43,34,24,0.12)] h-fit max-lg:!static"
+      class="sticky top-[100px] p-4 rounded-[18px] bg-surface border border-[rgba(43,34,24,0.12)] h-fit max-lg:!static max-lg:order-first"
     >
       <div class="text-sm mb-[12px] text-muted">答题卡</div>
-      <div class="grid grid-cols-4 gap-[12px]">
+      <div class="grid grid-cols-5 gap-[12px]">
         <button
           v-for="(question, index) in questions"
           :key="question.id"
