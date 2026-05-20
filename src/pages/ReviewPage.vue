@@ -15,13 +15,31 @@ const router = useRouter();
 const bank = computed(() => bankStore.bank);
 const attempt = computed(() => attemptStore.attempt);
 
+const orderedQuestions = computed(() => {
+  if (!bank.value) return [];
+  if (!attempt.value?.questionOrder) return bank.value.questions;
+  const qMap = new Map(bank.value.questions.map((q) => [q.id, q]));
+  return attempt.value.questionOrder
+    .map((id) => qMap.get(id))
+    .filter((q): q is QuestionItem => !!q);
+});
+
+const resolvedQuestions = computed(() => {
+  const shuffled = attempt.value?.shuffledQuestions;
+  if (!shuffled) return orderedQuestions.value;
+  return orderedQuestions.value.map((q) => shuffled[q.id] ?? q);
+});
+
 const statusMap = computed(() => {
   if (!bank.value || !attempt.value) return {};
+  const shuffled = attempt.value.shuffledQuestions;
   return bank.value.questions.reduce<
     Record<string, ReturnType<typeof evaluateStatus>>
   >((acc, question) => {
     const selected = attempt.value?.answers[question.id]?.selected ?? [];
-    acc[question.id] = evaluateStatus(question, selected);
+    // Use shuffled question for evaluation if available (answer IDs were remapped)
+    const evalQuestion = shuffled?.[question.id] ?? question;
+    acc[question.id] = evaluateStatus(evalQuestion, selected);
     return acc;
   }, {});
 });
@@ -31,15 +49,15 @@ const statuses = computed(() => Object.values(statusMap.value));
 const correctCount = computed(
   () => statuses.value.filter((status) => status === 'correct').length,
 );
-const total = computed(() => bank.value?.questions.length ?? 0);
+const total = computed(() => orderedQuestions.value.length);
 const percent = computed(() =>
   total.value ? Math.round((correctCount.value / total.value) * 100) : 0,
 );
 
 const incorrectList = computed(() => {
   if (!bank.value) return [];
-  return bank.value.questions.filter(
-    (_question, index) => statuses.value[index] !== 'correct',
+  return resolvedQuestions.value.filter(
+    (question) => statusMap.value[question.id] !== 'correct',
   );
 });
 

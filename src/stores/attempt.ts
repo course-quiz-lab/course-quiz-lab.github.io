@@ -10,6 +10,17 @@ import { clearAttempt, loadAttempt, saveAttempt } from '../utils/idb';
 
 interface AttemptStoreState {
   attempt: AttemptState | null;
+  _pendingShuffleQuestions: boolean;
+  _pendingShuffleOptions: boolean;
+}
+
+function shuffle<T>(array: T[]): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
 }
 
 function buildEmptyAnswers(
@@ -30,6 +41,8 @@ function buildEmptyAnswers(
 export const useAttemptStore = defineStore('attempt', {
   state: (): AttemptStoreState => ({
     attempt: null,
+    _pendingShuffleQuestions: false,
+    _pendingShuffleOptions: false,
   }),
   getters: {
     hasAttempt: (state) => !!state.attempt,
@@ -44,7 +57,42 @@ export const useAttemptStore = defineStore('attempt', {
       }
       return false;
     },
-    async startAttempt(bankId: string, mode: Mode, questions: QuestionItem[]) {
+    async startAttempt(
+      bankId: string,
+      mode: Mode,
+      questions: QuestionItem[],
+      shuffleQuestions = false,
+      shuffleOptions = false,
+    ) {
+      let questionOrder: string[] | undefined;
+      let shuffledQuestions: Record<string, QuestionItem> | undefined;
+
+      if (shuffleQuestions) {
+        questionOrder = shuffle(questions.map((q) => q.id));
+      }
+      if (shuffleOptions) {
+        shuffledQuestions = {};
+        for (const q of questions) {
+          if (q.type !== 'judge' && q.options.length > 0) {
+            // Shuffle option texts but keep IDs (A, B, C…) in original order
+            const texts = q.options.map((o) => o.text);
+            const shuffledTexts = shuffle(texts);
+            const newOptions = q.options.map((o, i) => ({
+              ...o,
+              text: shuffledTexts[i],
+            }));
+            // Remap answer IDs: find where each correct answer's text moved to
+            const newAnswer = q.answer.map((answerId) => {
+              const originalText = q.options.find((o) => o.id === answerId)?.text;
+              if (!originalText) return answerId;
+              const newSlot = newOptions.find((o) => o.text === originalText);
+              return newSlot ? newSlot.id : answerId;
+            });
+            shuffledQuestions[q.id] = { ...q, options: newOptions, answer: newAnswer };
+          }
+        }
+      }
+
       const attempt: AttemptState = {
         bankId,
         mode,
@@ -52,13 +100,29 @@ export const useAttemptStore = defineStore('attempt', {
         currentIndex: 0,
         startedAt: Date.now(),
         answers: buildEmptyAnswers(questions),
+        questionOrder,
+        shuffledQuestions,
       };
       this.attempt = attempt;
       await saveAttempt(attempt);
     },
     async resetAttempt(bankId: string, mode: Mode, questions: QuestionItem[]) {
       await clearAttempt(bankId, mode);
-      await this.startAttempt(bankId, mode, questions);
+      // Preserve shuffle order from current attempt
+      const existingOrder = this.attempt?.questionOrder;
+      const existingShuffledQuestions = this.attempt?.shuffledQuestions;
+      const attempt: AttemptState = {
+        bankId,
+        mode,
+        view: 'single',
+        currentIndex: 0,
+        startedAt: Date.now(),
+        answers: buildEmptyAnswers(questions),
+        questionOrder: existingOrder,
+        shuffledQuestions: existingShuffledQuestions,
+      };
+      this.attempt = attempt;
+      await saveAttempt(attempt);
     },
     async updateSelection(questionId: string, selected: string[]) {
       if (!this.attempt) return;

@@ -57,6 +57,9 @@ export interface AttemptState {
   startedAt: number;
   submittedAt?: number;
   answers: Record<string, UserAnswer>;
+  questionOrder?: string[];
+  /** Shuffled question copies with remapped option texts and answers */
+  shuffledQuestions?: Record<string, QuestionItem>;
 }
 
 export function isMultiSelectType(type: QuestionType) {

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { useBankStore } from '../stores/bank';
 import { useAttemptStore } from '../stores/attempt';
 import { validateBankSchema } from '../utils/validation';
+import { clearAttempt } from '../utils/idb';
 import type { Bank, Mode } from '../types/quiz';
 import { mdiPlayCircleOutline } from '@mdi/js';
 import AppButton from '../components/ui/AppButton.vue';
@@ -33,6 +34,8 @@ const isLoading = ref(false);
 const selectedMode = ref<Mode>('practice');
 const importMethod = ref<ImportMethod>('upload');
 const importUrl = ref('');
+const shuffleQuestions = ref(false);
+const shuffleOptions = ref(false);
 
 function resetImportState() {
   errors.value = [];
@@ -100,7 +103,14 @@ async function confirmImport() {
   // TODO: multi-bank merge extension point.
   if (!preview.value) return;
   await bankStore.setBank(preview.value, warning.value ?? undefined);
+  // 清除该题库已有的作答记录，避免重新导入后旧进度残留
+  if (bankStore.bankId) {
+    await clearAttempt(bankStore.bankId, 'practice');
+    await clearAttempt(bankStore.bankId, 'exam');
+  }
   attemptStore.attempt = null;
+  attemptStore._pendingShuffleQuestions = shuffleQuestions.value;
+  attemptStore._pendingShuffleOptions = shuffleOptions.value;
   await router.push(`/${selectedMode.value}`);
 }
 </script>
@@ -320,6 +330,16 @@ async function confirmImport() {
             考试模式
           </button>
         </div>
+      </div>
+      <div v-if="preview" class="mt-3 grid gap-[10px]">
+        <label class="flex items-center gap-[10px] cursor-pointer text-sm">
+          <input type="checkbox" v-model="shuffleQuestions" class="w-4 h-4" />
+          <span>打乱题目顺序</span>
+        </label>
+        <label class="flex items-center gap-[10px] cursor-pointer text-sm">
+          <input type="checkbox" v-model="shuffleOptions" class="w-4 h-4" />
+          <span>打乱选项顺序</span>
+        </label>
       </div>
       <AppButton
         :disabled="!preview"

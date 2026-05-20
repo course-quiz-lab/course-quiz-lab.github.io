@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useAttemptStore } from '../stores/attempt';
 import { useBankStore } from '../stores/bank';
 import { evaluateStatus } from '../utils/scoring';
-import { isMultiSelectType, type QuestionType } from '../types/quiz';
+import { isMultiSelectType, type QuestionItem, type QuestionType } from '../types/quiz';
 import AppButton from './ui/AppButton.vue';
 import QuestionCard from './QuestionCard.vue';
 import QuestionOptions from './QuestionOptions.vue';
@@ -14,20 +14,40 @@ const attemptStore = useAttemptStore();
 const bank = computed(() => bankStore.bank);
 const attempt = computed(() => attemptStore.attempt);
 const questions = computed(() => bank.value?.questions ?? []);
-const total = computed(() => questions.value.length);
+const orderedQuestions = computed(() => {
+  if (!attempt.value?.questionOrder || !bank.value) return questions.value;
+  const qMap = new Map(bank.value.questions.map((q) => [q.id, q]));
+  return attempt.value.questionOrder
+    .map((id) => qMap.get(id))
+    .filter((q): q is QuestionItem => !!q);
+});
+const total = computed(() => orderedQuestions.value.length);
+
+function resolveQuestion(questionId: string) {
+  const base = questions.value.find((q) => q.id === questionId);
+  if (!base) return undefined;
+  return attempt.value?.shuffledQuestions?.[questionId] ?? base;
+}
 
 function answerStatus(questionId: string) {
-  const question = questions.value.find((item) => item.id === questionId);
+  const question = resolveQuestion(questionId);
   const entry = attempt.value?.answers[questionId];
   if (!question || !entry) return 'unanswered';
   if (attempt.value?.mode === 'exam' && !attempt.value?.submittedAt) {
-    return entry.selected.length > 0 ? 'answered' : 'unanswered';
+    return 'unanswered';
+  }
+  if (
+    isMultiSelectType(question.type) &&
+    attempt.value?.mode === 'practice' &&
+    !entry.submitted
+  ) {
+    return 'unanswered';
   }
   return evaluateStatus(question, entry.selected);
 }
 
 function answerText(questionId: string) {
-  const question = questions.value.find((item) => item.id === questionId);
+  const question = resolveQuestion(questionId);
   if (!question) return '';
   if (question.type === 'judge') {
     return question.answer
@@ -95,12 +115,12 @@ function gridItemClass(status: string) {
   >
     <div class="grid gap-4 max-lg:order-last">
       <div
-        v-for="(question, index) in questions"
+        v-for="(question, index) in orderedQuestions"
         :key="question.id"
         :data-question-index="index"
       >
         <QuestionCard
-          :question="question"
+          :question="resolveQuestion(question.id) ?? question"
           :index="index"
           :total="total"
           :status="answerStatus(question.id)"
@@ -108,7 +128,7 @@ function gridItemClass(status: string) {
           :answerText="answerText(question.id)"
         >
           <QuestionOptions
-            :question="question"
+            :question="resolveQuestion(question.id) ?? question"
             :modelValue="attempt.answers[question.id]?.selected ?? []"
             :disabled="optionsDisabled(question.id)"
             @update:modelValue="
@@ -131,10 +151,10 @@ function gridItemClass(status: string) {
       class="sticky top-[100px] p-4 rounded-[18px] bg-surface border border-[rgba(43,34,24,0.12)] h-fit max-lg:!static max-lg:order-first"
     >
       <div class="text-sm mb-[12px] text-muted">答题卡</div>
-      <div class="grid grid-cols-5 gap-[12px]">
+      <div class="grid grid-cols-5 md:grid-cols-10 lg:grid-cols-5 gap-[12px]">
         <button
-          v-for="(question, index) in questions"
-          :key="question.id"
+          v-for="(question, index) in orderedQuestions"
+          :key="'nav-' + question.id"
           class="border border-[rgba(43,34,24,0.12)] bg-surface-grid rounded-[10px] p-2 text-xs cursor-pointer"
           :class="gridItemClass(answerStatus(question.id))"
           @click="scrollToQuestion(index)"

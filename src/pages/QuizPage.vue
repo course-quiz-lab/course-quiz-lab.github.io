@@ -63,10 +63,16 @@ async function ensureAttempt(nextMode: Mode) {
     nextMode,
   );
   if (!loaded) {
+    const sq = attemptStore._pendingShuffleQuestions;
+    const so = attemptStore._pendingShuffleOptions;
+    attemptStore._pendingShuffleQuestions = false;
+    attemptStore._pendingShuffleOptions = false;
     await attemptStore.startAttempt(
       bankStore.bankId,
       nextMode,
       bankStore.bank.questions,
+      sq,
+      so,
     );
   }
 }
