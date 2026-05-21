@@ -1,11 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 import HomePage from '../pages/HomePage.vue';
-import ImportPage from '../pages/ImportPage.vue';
-import BankManagePage from '../pages/BankManagePage.vue';
-import BankSelectPage from '../pages/BankSelectPage.vue';
-import QuizConfigPage from '../pages/QuizConfigPage.vue';
-import QuizPage from '../pages/QuizPage.vue';
-import ReviewPage from '../pages/ReviewPage.vue';
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -18,37 +12,37 @@ const router = createRouter({
     {
       path: '/import',
       name: 'import',
-      component: ImportPage,
+      component: () => import('../pages/ImportPage.vue'),
       meta: { title: '导入题库' },
     },
     {
       path: '/banks/manage',
       name: 'bank-manage',
-      component: BankManagePage,
+      component: () => import('../pages/BankManagePage.vue'),
       meta: { title: '管理题库' },
     },
     {
       path: '/banks',
       name: 'banks',
-      component: BankSelectPage,
+      component: () => import('../pages/BankSelectPage.vue'),
       meta: { title: '选择题库' },
     },
     {
       path: '/banks/:bankId/configure',
       name: 'bank-configure',
-      component: QuizConfigPage,
+      component: () => import('../pages/QuizConfigPage.vue'),
       meta: { title: '答题配置' },
     },
     {
       name: 'quiz',
       path: '/:mode(practice|exam)',
-      component: QuizPage,
+      component: () => import('../pages/QuizPage.vue'),
       meta: { title: '答题模式' },
     },
     {
       path: '/review',
       name: 'review',
-      component: ReviewPage,
+      component: () => import('../pages/ReviewPage.vue'),
       meta: { title: '结果回顾' },
     },
   ],
