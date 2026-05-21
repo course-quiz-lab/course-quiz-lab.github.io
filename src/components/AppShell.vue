@@ -1,17 +1,27 @@
 <script setup lang="ts">
 import { mdiArrowLeft, mdiWeatherNight, mdiWeatherSunny } from '@mdi/js';
 import { computed, onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import AppButton from './ui/AppButton.vue';
 import AppIcon from './ui/AppIcon.vue';
 
 const route = useRoute();
+const router = useRouter();
 
 const theme = ref<'light' | 'dark'>('light');
 const THEME_KEY = 'quiz-theme';
 
 const isHome = computed(() => route.name === 'home');
 const themeLabel = computed(() => (theme.value === 'dark' ? '浅色' : '深色'));
+
+function goBack() {
+  const back = route.meta?.back as string | undefined;
+  if (back) {
+    router.push(back);
+  } else {
+    router.back();
+  }
+}
 
 function applyTheme(next: 'light' | 'dark') {
   theme.value = next;
@@ -74,7 +84,7 @@ onMounted(() => {
     <div v-else class="flex items-center justify-between mb-5">
       <AppButton
         v-if="route.name !== 'quiz'"
-        @click="$router.back()"
+        @click="goBack"
         variant="ghost"
         class="px-3 py-2 text-sm flex items-center gap-2"
         :icon-path="mdiArrowLeft"
