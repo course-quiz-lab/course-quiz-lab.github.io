@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import {
-  mdiChevronLeft,
-  mdiChevronRight,
-} from '@mdi/js';
+import { mdiChevronLeft, mdiChevronRight } from '@mdi/js';
 import { useAttemptStore } from '../stores/attempt';
 import { useBankStore } from '../stores/bank';
 import { evaluateStatus } from '../utils/scoring';
-import { isMultiSelectType, type QuestionItem, type QuestionType } from '../types/quiz';
+import {
+  isMultiSelectType,
+  type QuestionItem,
+  type QuestionType,
+} from '../types/quiz';
 import AppButton from './ui/AppButton.vue';
 import AppIcon from './ui/AppIcon.vue';
 import QuestionCard from './QuestionCard.vue';
@@ -32,7 +33,9 @@ const orderedQuestions = computed(() => {
 const total = computed(() => orderedQuestions.value.length);
 
 const currentPage = ref(1);
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)));
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(total.value / PAGE_SIZE)),
+);
 const currentQuestions = computed(() => {
   const start = (currentPage.value - 1) * PAGE_SIZE;
   return orderedQuestions.value.slice(start, start + PAGE_SIZE);
@@ -168,9 +171,7 @@ function scrollToQuestion(index: number) {
     @select="scrollToQuestion"
   >
     <!-- Page info -->
-    <div
-      class="flex items-center justify-between text-sm text-muted px-1"
-    >
+    <div class="flex items-center justify-between text-sm text-muted px-1">
       <span>第 {{ currentPage }} / {{ totalPages }} 页</span>
       <span>共 {{ total }} 题 · 每页 {{ PAGE_SIZE }} 题</span>
     </div>
@@ -196,7 +197,14 @@ function scrollToQuestion(index: number) {
             (selected) => handleSelect(question.id, selected, question.type)
           "
         />
-        <div class="mt-[12px]" v-if="isMultiSelectType(question.type) && attempt.mode === 'practice' && !attempt.answers[question.id]?.submitted">
+        <div
+          class="mt-[12px]"
+          v-if="
+            isMultiSelectType(question.type) &&
+            attempt.mode === 'practice' &&
+            !attempt.answers[question.id]?.submitted
+          "
+        >
           <AppButton
             :disabled="optionsDisabled(question.id)"
             @click="handleSubmit(question.id)"

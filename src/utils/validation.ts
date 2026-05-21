@@ -22,7 +22,7 @@ const DEFAULT_BOOLEAN_OPTIONS: OptionItem[] = [
 const ANSWER_SPLIT_RE = /[,、;]/;
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-function normalizeType(raw: unknown): QuestionType | null {
+export function normalizeType(raw: unknown): QuestionType | null {
   if (raw === undefined || raw === null) return null;
   const value = String(raw).toLowerCase();
   if (['single', 'single-choice', 'sc', 'radio'].includes(value))

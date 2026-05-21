@@ -30,7 +30,12 @@ const typeLabels: Record<QuestionType, string> = {
   indeterminate: '不定项选择题',
 };
 
-const allTypes: QuestionType[] = ['single', 'multiple', 'judge', 'indeterminate'];
+const allTypes: QuestionType[] = [
+  'single',
+  'multiple',
+  'judge',
+  'indeterminate',
+];
 
 /** { type → available count in bank } */
 const availableCounts = ref<Record<QuestionType, number>>({
@@ -159,9 +164,13 @@ async function startQuiz() {
             class="flex items-center justify-between gap-3"
             :class="{ 'opacity-30': availableCounts[type] === 0 }"
           >
-            <span class="text-sm text-muted shrink-0">{{ typeLabels[type] }}</span>
+            <span class="text-sm text-muted shrink-0">{{
+              typeLabels[type]
+            }}</span>
             <div class="flex items-center gap-2">
-              <span class="text-xs text-muted">共 {{ availableCounts[type] }} 题</span>
+              <span class="text-xs text-muted"
+                >共 {{ availableCounts[type] }} 题</span
+              >
               <input
                 type="number"
                 min="0"
@@ -174,9 +183,13 @@ async function startQuiz() {
             </div>
           </div>
         </div>
-        <div class="border-t border-[color:var(--border)] pt-3 mt-3 flex items-center justify-between text-sm">
+        <div
+          class="border-t border-[color:var(--border)] pt-3 mt-3 flex items-center justify-between text-sm"
+        >
           <span class="font-medium">选题总计</span>
-          <span :class="hasSelection ? 'text-brand font-semibold' : 'text-danger'">
+          <span
+            :class="hasSelection ? 'text-brand font-semibold' : 'text-danger'"
+          >
             {{ selectedTotal }} / {{ maxTotal }} 题
           </span>
         </div>
@@ -193,7 +206,9 @@ async function startQuiz() {
         </div>
 
         <div class="text-sm text-muted mb-3">选择答题模式</div>
-        <div class="inline-flex border border-[color:var(--border)] rounded-full overflow-hidden mb-2">
+        <div
+          class="inline-flex border border-[color:var(--border)] rounded-full overflow-hidden mb-2"
+        >
           <button
             class="border-none px-5 py-[10px] text-sm cursor-pointer bg-transparent text-muted transition-all duration-200"
             :class="{ '!bg-brand !text-white': selectedMode === 'practice' }"

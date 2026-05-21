@@ -1,8 +1,4 @@
-export type QuestionType =
-  | 'single'
-  | 'multiple'
-  | 'judge'
-  | 'indeterminate';
+export type QuestionType = 'single' | 'multiple' | 'judge' | 'indeterminate';
 export type Mode = 'practice' | 'exam';
 export type ViewMode = 'single' | 'paper';
 
@@ -71,4 +67,45 @@ export interface BankMetaEntry {
 
 export function isMultiSelectType(type: QuestionType) {
   return type === 'multiple' || type === 'indeterminate';
+}
+
+// ── Excel Import Types ──────────────────────────────────
+
+/** Column mapping configuration for Excel import */
+export interface ColumnMapping {
+  /** Index of the column containing question type, or null if not present (smart inference) */
+  typeCol: number | null;
+  /** Index of the column containing the question stem */
+  stemCol: number;
+  /** Ordered array of column indices for options */
+  optionCols: number[];
+  /** Index of the column containing the answer */
+  answerCol: number;
+  /** Index of the column containing analysis/explanation, or null if not present */
+  analysisCol: number | null;
+  /** Index of the column containing difficulty, or null if not present */
+  difficultyCol: number | null;
+  /** Whether the first row is a header row */
+  hasHeader: boolean;
+}
+
+/** Raw parsed data from an Excel sheet */
+export interface ExcelSheetData {
+  headers: string[];
+  rows: string[][];
+}
+
+/** Result of reading an Excel file */
+export interface ExcelParseResult {
+  sheetNames: string[];
+  sheets: Record<string, ExcelSheetData>;
+}
+
+/** Preview data shown before confirming import */
+export interface ExcelPreviewData {
+  totalRows: number;
+  typeBreakdown: Record<string, number>;
+  samples: QuestionItem[];
+  errors: string[];
+  unsupportedRows: string[];
 }

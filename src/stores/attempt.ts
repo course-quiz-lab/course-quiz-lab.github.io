@@ -84,12 +84,18 @@ export const useAttemptStore = defineStore('attempt', {
             }));
             // Remap answer IDs: find where each correct answer's text moved to
             const newAnswer = q.answer.map((answerId) => {
-              const originalText = q.options.find((o) => o.id === answerId)?.text;
+              const originalText = q.options.find(
+                (o) => o.id === answerId,
+              )?.text;
               if (!originalText) return answerId;
               const newSlot = newOptions.find((o) => o.text === originalText);
               return newSlot ? newSlot.id : answerId;
             });
-            shuffledQuestions[q.id] = { ...q, options: newOptions, answer: newAnswer };
+            shuffledQuestions[q.id] = {
+              ...q,
+              options: newOptions,
+              answer: newAnswer,
+            };
           }
         }
       }
