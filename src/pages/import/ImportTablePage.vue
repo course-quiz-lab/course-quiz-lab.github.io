@@ -7,7 +7,7 @@ import AppButton from '../../components/ui/AppButton.vue';
 import AppCard from '../../components/ui/AppCard.vue';
 import AppIcon from '../../components/ui/AppIcon.vue';
 import { useImportStore } from '../../stores/import';
-import type { Bank, ExcelParseResult, QuestionItem } from '../../types/quiz';
+import type { Bank, QuestionItem } from '../../types/quiz';
 import { buildPreviewData, readExcelFile } from '../../utils/excel';
 
 const router = useRouter();
@@ -53,10 +53,8 @@ function confirmExcelPreview() {
 
   const bank: Bank = {
     meta: {
-      course: {
-        code: bankName,
-        name: bankName,
-      },
+      name: bankName,
+      course: bankName,
       author: 'Excel 导入',
       source: importStore.fileName,
       total: importStore.excelQuestions.length,

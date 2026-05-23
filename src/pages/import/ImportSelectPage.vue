@@ -30,6 +30,13 @@ const methods: MethodItem[] = [
     description: '从本地选择 JSON 格式的题库文件',
   },
   {
+    id: 'cloud',
+    label: '云端题库',
+    icon: mdiCloudOutline,
+    disabled: false,
+    description: '从云端拉取题库索引并下载导入',
+  },
+  {
     id: 'link',
     label: '链接导入',
     icon: mdiLinkVariant,
@@ -50,13 +57,6 @@ const methods: MethodItem[] = [
     disabled: true,
     description: '预留：后续支持解析 Word 题库',
   },
-  {
-    id: 'cloud',
-    label: '云端题库',
-    icon: mdiCloudOutline,
-    disabled: true,
-    description: '预留：从云端拉取题库索引并下载',
-  },
 ];
 
 const router = useRouter();
@@ -70,7 +70,7 @@ function handleSelect(method: ImportMethod) {
     upload: '/import/json',
     link: '/import/fetch',
     xlsx: '/import/table',
-    cloud: null,
+    cloud: '/import/cloud',
     word: null,
   };
 

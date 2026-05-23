@@ -108,7 +108,7 @@ function normalizeAnswer(
 
 export function buildBankId(bank: Bank) {
   if (bank.meta.id) return bank.meta.id;
-  const courseId = bank.meta.course.code || bank.meta.course.name;
+  const courseId = bank.meta.course || 'unknown';
   const payload = `${courseId}:${bank.meta.author}:${bank.questions.length}`;
   return `bank-${simpleHash(payload)}`;
 }
@@ -128,19 +128,24 @@ export function validateBankSchema(raw: unknown): ValidationResult {
     string,
     unknown
   >;
-  const courseInput = (metaInput.course ?? {}) as Record<string, unknown>;
-  const courseCode = String(courseInput.code ?? '').trim();
-  const courseName = String(courseInput.name ?? '').trim();
+
+  // 兼容新旧两种格式：新 schema course 为字符串，旧为对象
+  const courseRaw = metaInput.course;
+  const courseName =
+    typeof courseRaw === 'string'
+      ? courseRaw.trim()
+      : String((courseRaw as Record<string, unknown>)?.name ?? '').trim();
+  const bankName = String(metaInput.name ?? courseName ?? '').trim();
   const author = String(metaInput.author ?? '').trim();
 
-  if (!courseCode) {
-    errors.push('元数据缺少课程代码。');
+  if (!bankName) {
+    errors.push('元数据缺少题库名称（name）。');
   }
   if (!courseName) {
-    errors.push('元数据缺少课程名称。');
+    errors.push('元数据缺少课程名称（course）。');
   }
   if (!author) {
-    errors.push('元数据缺少作者。');
+    errors.push('元数据缺少作者（author）。');
   }
 
   const questionsInput = input.questions;
@@ -224,40 +229,35 @@ export function validateBankSchema(raw: unknown): ValidationResult {
     return { errors };
   }
 
-  const courseLinkRaw = courseInput.link;
-  const courseLink =
-    typeof courseLinkRaw === 'string' && courseLinkRaw.trim()
-      ? courseLinkRaw.trim()
-      : undefined;
   const sourceRaw = metaInput.source;
   const source =
     typeof sourceRaw === 'string' && sourceRaw.trim()
       ? sourceRaw.trim()
       : undefined;
-  const publishedRaw = metaInput.publishedAt;
-  const publishedAt =
-    typeof publishedRaw === 'string' && publishedRaw.trim()
-      ? publishedRaw.trim()
+  const sourceUrlRaw = metaInput.sourceUrl;
+  const sourceUrl =
+    typeof sourceUrlRaw === 'string' && sourceUrlRaw.trim()
+      ? sourceUrlRaw.trim()
       : undefined;
 
   const meta: BankMeta = {
     id: metaInput.id ? String(metaInput.id) : undefined,
-    course: {
-      code: courseCode,
-      name: courseName,
-      link: courseLink,
-    },
+    name: bankName,
+    course: courseName,
     author,
     source,
-    publishedAt,
+    sourceUrl,
     total: questions.length,
   };
 
   const warning =
     questions.length > 5000 ? '题目数量超过 5000，可能影响性能。' : undefined;
 
+  const schemaRef =
+    typeof input.$schema === 'string' ? input.$schema : undefined;
+
   return {
-    bank: { meta, questions },
+    bank: { $schema: schemaRef, meta, questions },
     errors,
     warning,
   };

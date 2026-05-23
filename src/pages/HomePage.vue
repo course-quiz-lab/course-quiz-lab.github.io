@@ -112,9 +112,11 @@ const actions = computed<ActionCard[]>(() => [
   <div class="page">
     <!-- Hero section -->
     <section class="bg-surface rounded-2xl p-10 mb-4 max-sm:p-6">
-      <h1 class="text-3xl mb-3 max-sm:text-2xl">让刷题更清晰、更从容</h1>
+      <h1 class="text-3xl mb-3 max-sm:text-2xl font-bold">
+        低头是题海，抬头是未来。
+      </h1>
       <p class="text-muted max-sm:text-sm">
-        支持单选、多选、判断、不定项四种题型；练习与考试模式分离；可切换单题与整卷视图。
+        刷题小站支持导入多种格式题库，让刷题更清晰、更从容
       </p>
     </section>
 

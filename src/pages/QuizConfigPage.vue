@@ -147,9 +147,12 @@ async function startQuiz() {
 <template>
   <div class="page max-w-[700px] mx-auto">
     <h1 class="text-[28px] max-sm:text-[22px] mb-2">答题配置</h1>
-    <p v-if="bank" class="text-muted text-sm mb-6">
-      {{ bank.meta.course.name }} · <code>{{ bank.meta.course.code }}</code>
-    </p>
+    <div v-if="bank" class="mb-6">
+      <div class="text-[22px] max-sm:text-lg">
+        {{ bank.meta.name }}
+      </div>
+      <span class="text-sm text-muted">{{ bank.meta.course }}</span>
+    </div>
 
     <div v-if="isLoading" class="text-muted text-sm">加载中…</div>
 

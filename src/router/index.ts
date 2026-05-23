@@ -38,6 +38,12 @@ const router = createRouter({
       meta: { title: '导入 Excel', back: '/import/select' },
     },
     {
+      path: '/import/cloud',
+      name: 'import-cloud',
+      component: () => import('../pages/import/ImportCloudPage.vue'),
+      meta: { title: '云端题库', back: '/import/select' },
+    },
+    {
       path: '/import/preview',
       name: 'import-preview',
       component: () => import('../pages/import/ImportPreviewPage.vue'),

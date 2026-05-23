@@ -87,7 +87,8 @@ async function handleFileChange(event: Event) {
         >
 {
   "metadata": {
-    "course": { "code": "MATH101", "name": "高等数学" },
+    "name": "高等数学习题集",
+    "course": "高等数学",
     "author": "张三"
   },
   "questions": [

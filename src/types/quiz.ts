@@ -3,18 +3,19 @@ export type Mode = 'practice' | 'exam';
 export type ViewMode = 'single' | 'paper';
 export type ImportMethod = 'upload' | 'link' | 'cloud' | 'xlsx' | 'word';
 
-export interface CourseMeta {
-  code: string;
-  name: string;
-  link?: string;
-}
-
+/**
+ * 题库元数据，对应 schema 中的 metadata 对象。
+ * - name: 题库名称（如 "大学物理题库"）
+ * - course: 课程全称（字符串，如 "大学物理"）
+ * - sourceUrl: 源文件链接
+ */
 export interface BankMeta {
   id?: string;
-  course: CourseMeta;
+  name: string;
+  course: string;
   author: string;
   source?: string;
-  publishedAt?: string;
+  sourceUrl?: string;
   total?: number;
 }
 
@@ -35,6 +36,7 @@ export interface QuestionItem {
 }
 
 export interface Bank {
+  $schema?: string;
   meta: BankMeta;
   questions: QuestionItem[];
 }
@@ -68,6 +70,30 @@ export interface BankMetaEntry {
 
 export function isMultiSelectType(type: QuestionType) {
   return type === 'multiple' || type === 'indeterminate';
+}
+
+// ── Cloud Bank Types ────────────────────────────────────
+
+/** Per-type question count from cloud index */
+export interface CloudBankCounts {
+  single: number;
+  multiple: number;
+  judge: number;
+  indeterminate: number;
+}
+
+/** Entry in the cloud bank index.json */
+export interface CloudBankEntry {
+  metadata: BankMeta;
+  count: CloudBankCounts;
+  url: string;
+}
+
+/** Structure of the cloud bank index.json */
+export interface CloudBankIndex {
+  $schema?: string;
+  banks: CloudBankEntry[];
+  updatedAt: string;
 }
 
 // ── Excel Import Types ──────────────────────────────────

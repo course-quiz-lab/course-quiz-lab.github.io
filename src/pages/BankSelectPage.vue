@@ -99,11 +99,13 @@ function goToImport() {
             }"
             @click="selectBank(entry)"
           >
-            <div class="font-medium text-sm">{{ entry.meta.course.name }}</div>
-            <div class="flex gap-3 text-xs text-muted mt-1">
-              <code>{{ entry.meta.course.code }}</code>
-              <span>{{ entry.meta.total ?? '?' }} 题</span>
-              <span>{{ entry.meta.author || '未知作者' }}</span>
+            <div class="font-medium text-sm">{{ entry.meta.name }}</div>
+            <div class="block text-xs text-muted mt-0.5">
+              {{ entry.meta.course }}
+            </div>
+            <div class="block text-[11px] text-muted/70 mt-0.5">
+              {{ entry.meta.total ?? '?' }} 题 ·
+              {{ entry.meta.author || '未知作者' }}
             </div>
           </button>
         </div>
@@ -117,17 +119,14 @@ function goToImport() {
       </div>
 
       <AppCard v-else class="max-sm:p-4">
-        <!-- Header: course name + code -->
+        <!-- Header -->
         <div class="mb-5">
           <div class="text-[22px] max-sm:text-lg mb-1">
-            {{ selectedBank.meta.course.name }}
+            {{ selectedBank.meta.name }}
           </div>
-          <code class="text-sm text-muted">{{
-            selectedBank.meta.course.code
-          }}</code>
+          <span class="text-sm text-muted">{{ selectedBank.meta.course }}</span>
         </div>
 
-        <!-- Two info cards side by side -->
         <div
           class="grid grid-cols-[1fr_2fr] gap-4 mb-5 max-sm:grid-cols-1 min-w-0"
         >
@@ -165,24 +164,24 @@ function goToImport() {
               题库信息
             </div>
             <div class="grid gap-2 min-w-0">
-              <div class="flex items-center gap-2 text-sm min-w-0">
-                <span class="text-muted w-[4.5em] shrink-0">作者</span>
+              <div class="grid grid-cols-[5em_1fr] gap-2 text-sm min-w-0">
+                <span class="text-muted">作者</span>
                 <span class="truncate">
                   {{ selectedBank.meta.author || '未标注' }}
                 </span>
               </div>
               <div
                 v-if="selectedBank.meta.source"
-                class="flex items-center gap-2 text-sm min-w-0"
+                class="grid grid-cols-[5em_1fr] gap-2 text-sm min-w-0"
               >
-                <span class="text-muted w-[4.5em] shrink-0">来源</span>
+                <span class="text-muted">来源</span>
                 <span class="truncate">{{ selectedBank.meta.source }}</span>
               </div>
               <div
                 v-if="currentEntry"
-                class="flex items-center gap-2 text-sm min-w-0"
+                class="grid grid-cols-[5em_1fr] gap-2 text-sm min-w-0"
               >
-                <span class="text-muted w-[4.5em] shrink-0">导入时间</span>
+                <span class="text-muted">导入时间</span>
                 <span class="truncate">
                   {{
                     new Date(currentEntry.importedAt).toLocaleString('zh-CN')
@@ -190,23 +189,22 @@ function goToImport() {
                 </span>
               </div>
               <div
-                v-if="selectedBank.meta.course.link"
-                class="flex items-center gap-2 text-sm text-brand min-w-0"
+                v-if="selectedBank.meta.sourceUrl"
+                class="grid grid-cols-[5em_1fr] gap-2 text-sm text-brand min-w-0"
               >
-                <span class="text-muted w-[4.5em] shrink-0">课程链接</span>
+                <span class="text-muted text-nowrap">源文件链接</span>
                 <a
                   class="truncate underline"
-                  :href="selectedBank.meta.course.link"
+                  :href="selectedBank.meta.sourceUrl"
                   target="_blank"
                 >
-                  {{ selectedBank.meta.course.link }}
+                  {{ selectedBank.meta.sourceUrl }}
                 </a>
               </div>
             </div>
           </AppCard>
         </div>
 
-        <!-- Action -->
         <div class="border-t border-[color:var(--border)] pt-5">
           <AppButton
             :icon-path="mdiCogOutline"

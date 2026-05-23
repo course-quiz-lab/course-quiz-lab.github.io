@@ -22,19 +22,16 @@ pnpm preview
 
 ```json
 {
+    "$schema": "https://course-quiz-lab.github.io/json-schema/v1/bank.schema.json",
     "metadata": {
-        "course": {
-            "code": "MATH101",
-            "name": "高等数学",
-            "link": "https://example.com/course/math101"
-        },
+        "name": "高等数学习题集",
+        "course": "高等数学",
         "author": "张三",
         "source": "期中题库",
-        "publishedAt": "2026-05-20T08:00:00Z"
+        "sourceUrl": "https://example.com/source.json"
     },
     "questions": [
         {
-            "id": "q-1",
             "type": "single",
             "stem": "题干...",
             "options": ["选项1", "选项2", "选项3", "选项4"],
@@ -43,20 +40,17 @@ pnpm preview
             "difficulty": "中等"
         },
         {
-            "id": "q-2",
             "type": "multiple",
             "stem": "题干...",
             "options":["选项1", "选项2", "选项3", "选项4"],
             "answer": [0, 2]
         },
         {
-            "id": "q-3",
             "type": "judge",
             "stem": "题干...",
             "answer": true
         },
         {
-            "id": "q-4",
             "type": "indeterminate",
             "stem": "题干...",
             "options":["选项1", "选项2", "选项3", "选项4"],
@@ -69,8 +63,8 @@ pnpm preview
 说明：
 
 - `type` 支持 `single` / `multiple` / `judge` / `indeterminate`。
-- `metadata.course.code` 与 `metadata.course.name` 必填，`metadata.author` 必填。
-- `options` 使用数组（单选/多选/不定项必填）。
+- `metadata.name`（题库名称）、`metadata.course`（课程全称）、`metadata.author`（作者）均必填。
+- `options` 使用字符串数组（单选/多选/不定项必填）。
 - `answer` 使用选项索引（从 0 开始），多选/不定项为数组。
 - 判断题 `answer` 使用 `true/false`。
 - 选项不超过 26 个时显示 A-Z，超过则显示数字。

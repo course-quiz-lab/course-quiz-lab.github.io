@@ -127,11 +127,11 @@ function toggleView() {
           {{ isExam ? '考试模式' : '练习模式' }}
         </div>
         <div class="text-muted text-sm" v-if="isExam">
-          {{ bank.meta.course?.name ?? '未命名课程' }} · 未作答
+          {{ bank.meta.name || bank.meta.course || '未命名课程' }} · 未作答
           {{ unansweredCount }} 题
         </div>
         <div class="text-muted text-sm" v-else>
-          {{ bank.meta.course?.name ?? '未命名课程' }} · 已作答
+          {{ bank.meta.name || bank.meta.course || '未命名课程' }} · 已作答
           {{ answeredCount }} /
           {{ bank.questions.length }}
         </div>

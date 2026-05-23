@@ -83,10 +83,10 @@ async function confirmImport() {
           class="p-4 rounded-xl border border-[rgba(47,133,90,0.3)] bg-[rgba(47,133,90,0.06)] grid gap-1.5"
         >
           <div class="text-base font-medium">
-            {{ importStore.preview.meta.course.name }}
+            {{ importStore.preview.meta.name }}
           </div>
           <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted">
-            <code>{{ importStore.preview.meta.course.code }}</code>
+            <code>{{ importStore.preview.meta.course }}</code>
             <span>{{ importStore.preview.meta.author || '未标注' }}</span>
             <span>{{ importStore.preview.questions.length }} 题</span>
             <span v-if="importStore.preview.meta.source">{{

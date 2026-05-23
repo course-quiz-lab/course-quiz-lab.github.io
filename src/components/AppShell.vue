@@ -29,8 +29,41 @@ function applyTheme(next: 'light' | 'dark') {
   localStorage.setItem(THEME_KEY, next);
 }
 
-function toggleTheme() {
-  applyTheme(theme.value === 'dark' ? 'light' : 'dark');
+const enableTransitions = () =>
+  'startViewTransition' in document &&
+  window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+
+async function toggleTheme(e: MouseEvent) {
+  const next = theme.value === 'dark' ? 'light' : 'dark';
+
+  if (!enableTransitions()) {
+    applyTheme(next);
+    return;
+  }
+
+  const { clientX: x, clientY: y } = e;
+  const clipPath = [
+    `circle(0px at ${x}px ${y}px)`,
+    `circle(${Math.hypot(
+      Math.max(x, innerWidth - x),
+      Math.max(y, innerHeight - y),
+    )}px at ${x}px ${y}px)`,
+  ];
+
+  await document.startViewTransition(async () => {
+    applyTheme(next);
+    await (await import('vue')).nextTick();
+  }).ready;
+
+  document.documentElement.animate(
+    { clipPath: theme.value === 'dark' ? clipPath.reverse() : clipPath },
+    {
+      duration: 300,
+      easing: 'ease-in',
+      fill: 'forwards',
+      pseudoElement: `::view-transition-${theme.value === 'dark' ? 'old' : 'new'}(root)`,
+    },
+  );
 }
 
 onMounted(() => {
@@ -70,7 +103,7 @@ onMounted(() => {
           <AppButton
             variant="ghost"
             class="px-2 py-1 text-sm"
-            @click="toggleTheme"
+            @click="toggleTheme($event)"
             :title="themeLabel + '模式'"
           >
             <AppIcon
@@ -106,7 +139,7 @@ onMounted(() => {
         <AppButton
           variant="ghost"
           class="px-2 py-1 text-sm"
-          @click="toggleTheme"
+          @click="toggleTheme($event)"
           :title="themeLabel + '模式'"
         >
           <AppIcon
@@ -121,3 +154,21 @@ onMounted(() => {
     </main>
   </div>
 </template>
+
+<style>
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root),
+html[data-theme='dark']::view-transition-new(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root),
+html[data-theme='dark']::view-transition-old(root) {
+  z-index: 9999;
+}
+</style>

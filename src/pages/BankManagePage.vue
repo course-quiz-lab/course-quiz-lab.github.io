@@ -17,7 +17,7 @@ onMounted(async () => {
 });
 
 async function handleDelete(entry: BankMetaEntry) {
-  const name = entry.meta.course.name;
+  const name = entry.meta.name || entry.meta.course;
   const ok = confirm(`确定要删除题库「${name}」吗？此操作不可恢复。`);
   if (!ok) return;
   deletingId.value = entry.bankId;
@@ -38,7 +38,7 @@ async function handleExport(entry: BankMetaEntry) {
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const filename = `${entry.meta.course.code || 'bank'}-${entry.meta.course.name || 'export'}.json`;
+    const filename = `${entry.meta.course || 'bank'}.json`;
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
@@ -81,15 +81,15 @@ async function handleExport(entry: BankMetaEntry) {
       >
         <div class="min-w-0 flex-1">
           <div class="font-medium text-base">
-            {{ entry.meta.course.name }}
+            {{ entry.meta.name }}
           </div>
-          <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted mt-1">
-            <code>{{ entry.meta.course.code }}</code>
-            <span>{{ entry.meta.total ?? '?' }} 题</span>
-            <span>{{ entry.meta.author || '未知作者' }}</span>
-            <span>{{
-              new Date(entry.importedAt).toLocaleString('zh-CN')
-            }}</span>
+          <div class="block text-sm text-muted mt-0.5">
+            {{ entry.meta.course }}
+          </div>
+          <div class="block text-[13px] text-muted/70 mt-0.5">
+            {{ entry.meta.total ?? '?' }} 题 ·
+            {{ entry.meta.author || '未知作者' }} ·
+            {{ new Date(entry.importedAt).toLocaleString('zh-CN') }}
           </div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
