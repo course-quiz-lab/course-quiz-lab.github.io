@@ -26,8 +26,8 @@
         "prettier": "^3.8.3",
         "tailwindcss": "^4.3.0",
         "typescript": "~6.0.2",
-        "vite": "^8.0.12",
+        "vite": "^8.0.14",
         "vite-plugin-bundle-prefetch": "^0.0.4",
-        "vue-tsc": "^3.3.1"
+        "vue-tsc": "^3.3.2"
     }
 }
