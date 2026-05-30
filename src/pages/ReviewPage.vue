@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import StatusPill from '../components/StatusPill.vue';
 import AppButton from '../components/ui/AppButton.vue';
+import Pagination from '../components/ui/Pagination.vue';
 import { useAttemptStore } from '../stores/attempt';
 import { useBankStore } from '../stores/bank';
 import { evaluateStatus } from '../utils/scoring';
 import type { QuestionItem, QuestionType } from '../types/quiz';
+
+const PAGE_SIZE = 10;
 
 const bankStore = useBankStore();
 const attemptStore = useAttemptStore();
@@ -37,7 +40,6 @@ const statusMap = computed(() => {
     Record<string, ReturnType<typeof evaluateStatus>>
   >((acc, question) => {
     const selected = attempt.value?.answers[question.id]?.selected ?? [];
-    // Use shuffled question for evaluation if available (answer IDs were remapped)
     const evalQuestion = shuffled?.[question.id] ?? question;
     acc[question.id] = evaluateStatus(evalQuestion, selected);
     return acc;
@@ -56,9 +58,19 @@ const percent = computed(() =>
 
 const incorrectList = computed(() => {
   if (!bank.value) return [];
-  return resolvedQuestions.value.filter(
-    (question) => statusMap.value[question.id] !== 'correct',
-  );
+  return resolvedQuestions.value.filter((question) => {
+    const status = statusMap.value[question.id];
+    return status !== 'correct' && status !== 'unanswered';
+  });
+});
+
+const currentPage = ref(1);
+const totalPages = computed(() =>
+  Math.ceil(incorrectList.value.length / PAGE_SIZE),
+);
+const pagedIncorrect = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE;
+  return incorrectList.value.slice(start, start + PAGE_SIZE);
 });
 
 const canReview = computed(() => {
@@ -113,10 +125,10 @@ function answerLabel(question: QuestionItem) {
         </div>
       </div>
       <div class="flex flex-wrap gap-[12px]">
-        <AppButton variant="ghost" @click="router.push('/practice')">
+        <AppButton variant="secondary" @click="router.push('/practice')">
           继续练习
         </AppButton>
-        <AppButton variant="ghost" @click="router.push('/exam')">
+        <AppButton variant="secondary" @click="router.push('/exam')">
           继续考试
         </AppButton>
         <AppButton @click="router.push('/import')">更换题库</AppButton>
@@ -127,15 +139,18 @@ function answerLabel(question: QuestionItem) {
       v-if="canReview"
       class="bg-surface rounded-2xl p-[26px] max-sm:p-4 border border-[rgba(43,34,24,0.12)]"
     >
-      <div class="text-sm text-muted tracking-wide uppercase">
+      <div class="text-sm text-muted tracking-wide uppercase mb-3">
         错题与部分正确
+        <span v-if="incorrectList.length > 0" class="ml-1 font-normal"
+          >（{{ incorrectList.length }} 题）</span
+        >
       </div>
       <div v-if="incorrectList.length === 0" class="text-muted text-sm">
         目前没有错题。
       </div>
       <ul v-else class="list-none m-0 p-0 grid gap-[12px]">
         <li
-          v-for="question in incorrectList"
+          v-for="question in pagedIncorrect"
           :key="question.id"
           class="p-4 rounded-xl border border-[rgba(43,34,24,0.12)] bg-surface-review"
         >
@@ -154,6 +169,12 @@ function answerLabel(question: QuestionItem) {
           </div>
         </li>
       </ul>
+      <Pagination
+        v-if="totalPages > 1"
+        :current="currentPage"
+        :total="totalPages"
+        @update:current="currentPage = $event"
+      />
     </section>
   </div>
 </template>

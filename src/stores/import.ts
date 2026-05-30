@@ -82,9 +82,9 @@ export const useImportStore = defineStore('import', {
       if (!this.preview) return;
       await bankStore.setBank(this.preview, this.warning ?? undefined);
       if (bankStore.bankId) {
-        const saved = await loadAttempt();
-        if (saved?.bankId === bankStore.bankId) {
-          await clearAttempt();
+        const saved = await loadAttempt(bankStore.bankId);
+        if (saved) {
+          await clearAttempt(bankStore.bankId);
         }
       }
       this.reset();

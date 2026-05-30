@@ -17,6 +17,8 @@ export interface BankMeta {
   source?: string;
   sourceUrl?: string;
   total?: number;
+  /** 导入来源标记：upload / link / xlsx / cloud */
+  importMethod?: ImportMethod;
 }
 
 export interface OptionItem {

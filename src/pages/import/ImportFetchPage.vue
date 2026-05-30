@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { mdiLinkVariant } from '@mdi/js';
 import { useRouter } from 'vue-router';
-import ImportStepIndicator from '../../components/import/ImportStepIndicator.vue';
 import AppButton from '../../components/ui/AppButton.vue';
 import AppCard from '../../components/ui/AppCard.vue';
 import AppIcon from '../../components/ui/AppIcon.vue';
@@ -41,8 +40,7 @@ async function importFromUrl() {
 </script>
 
 <template>
-  <div class="max-w-[600px] mx-auto px-4 flex flex-col gap-4 sm:gap-5">
-    <ImportStepIndicator :current-step="2" />
+  <div class="max-w-[576px] mx-auto">
     <AppCard class="!p-4 sm:!p-5 overflow-hidden">
       <div class="flex items-center gap-2 mb-3">
         <span

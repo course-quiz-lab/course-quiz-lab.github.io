@@ -1,11 +1,26 @@
+/**
+ * 题库 schema 校验器。
+ *
+ * 职责：
+ * 1. 校验用户提供的 JSON 是否符合题库 schema
+ * 2. 将各种输入格式归一化为内部统一的 Bank 结构
+ * 3. 生成题库唯一标识
+ *
+ * 题型/选项/答案的归一化逻辑委托给 ./bank-normalize，
+ * 字母标签转换委托给 ./bank-label。
+ */
+
 import {
   isMultiSelectType,
   type Bank,
   type BankMeta,
-  type OptionItem,
   type QuestionItem,
-  type QuestionType,
 } from '../types/quiz';
+import {
+  normalizeAnswer,
+  normalizeOptionList,
+  normalizeType,
+} from './bankNormalize';
 import { simpleHash } from './hash';
 
 export interface ValidationResult {
@@ -14,97 +29,7 @@ export interface ValidationResult {
   warning?: string;
 }
 
-const DEFAULT_BOOLEAN_OPTIONS: OptionItem[] = [
-  { id: 'T', text: '正确', index: 0 },
-  { id: 'F', text: '错误', index: 1 },
-];
-
-const ANSWER_SPLIT_RE = /[,、;]/;
-const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-export function normalizeType(raw: unknown): QuestionType | null {
-  if (raw === undefined || raw === null) return null;
-  const value = String(raw).toLowerCase();
-  if (['single', 'single-choice', 'sc', 'radio'].includes(value))
-    return 'single';
-  if (['multiple', 'multi', 'mc', 'checkbox'].includes(value))
-    return 'multiple';
-  if (['indeterminate', 'multi-any'].includes(value)) return 'indeterminate';
-  if (['boolean', 'judge', 'true-false', 'tf'].includes(value)) return 'judge';
-  return null;
-}
-
-function buildOptionLabel(index: number, total: number) {
-  if (total > LETTERS.length) return String(index + 1);
-  return LETTERS[index] ?? String(index + 1);
-}
-
-function normalizeOptionList(
-  raw: unknown,
-  type: QuestionType,
-): OptionItem[] | null {
-  if (type === 'judge') {
-    return DEFAULT_BOOLEAN_OPTIONS;
-  }
-  if (!Array.isArray(raw)) return null;
-  if (raw.length < 2) return null;
-
-  const items: OptionItem[] = [];
-  raw.forEach((value, index) => {
-    if (typeof value !== 'string' || !value.trim()) return;
-    const label = buildOptionLabel(index, raw.length);
-    items.push({ id: label, text: value.trim(), index });
-  });
-
-  return items.length >= 2 ? items : null;
-}
-
-function normalizeAnswerIndex(raw: unknown) {
-  if (raw === undefined || raw === null) return Number.NaN;
-  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : Number.NaN;
-  const text = String(raw).trim();
-  if (!text) return Number.NaN;
-  const parsed = Number(text);
-  return Number.isFinite(parsed) ? parsed : Number.NaN;
-}
-
-function indexToLabel(index: number, total: number) {
-  if (!Number.isInteger(index) || index < 0 || index >= total) return '';
-  return buildOptionLabel(index, total);
-}
-
-function normalizeAnswer(
-  raw: unknown,
-  type: QuestionType,
-  optionsCount: number,
-): string[] | null {
-  if (raw === undefined || raw === null) return null;
-  if (type === 'judge') {
-    if (typeof raw === 'boolean') return [raw ? 'T' : 'F'];
-    const value = String(raw).toLowerCase();
-    if (['t', 'true', '1', '正确', '是', '对'].includes(value)) return ['T'];
-    if (['f', 'false', '0', '错误', '否', '错'].includes(value)) return ['F'];
-    return null;
-  }
-  if (type === 'single') {
-    const index = normalizeAnswerIndex(raw);
-    const label = indexToLabel(index, optionsCount);
-    return label ? [label] : null;
-  }
-  if (Array.isArray(raw)) {
-    const values = raw
-      .map((item) => indexToLabel(normalizeAnswerIndex(item), optionsCount))
-      .filter(Boolean);
-    return values.length ? values : null;
-  }
-  const index = normalizeAnswerIndex(raw);
-  const value = indexToLabel(index, optionsCount);
-  if (!value) return null;
-  if (ANSWER_SPLIT_RE.test(value)) {
-    return [value];
-  }
-  return [value];
-}
+// ── Bank ID ─────────────────────────────────────────────
 
 export function buildBankId(bank: Bank) {
   if (bank.meta.id) return bank.meta.id;
@@ -113,6 +38,8 @@ export function buildBankId(bank: Bank) {
   return `bank-${simpleHash(payload)}`;
 }
 
+// ── Schema Validation ───────────────────────────────────
+
 export function validateBankSchema(raw: unknown): ValidationResult {
   const errors: string[] = [];
   if (!raw || typeof raw !== 'object') {
@@ -120,8 +47,10 @@ export function validateBankSchema(raw: unknown): ValidationResult {
   }
 
   const input = raw as Record<string, unknown>;
-  if (!input.metadata || typeof input.metadata !== 'object') {
-    errors.push('元数据 metadata 缺失或格式不正确。');
+  const hasMeta = input.meta && typeof input.meta === 'object';
+  const hasMetadata = input.metadata && typeof input.metadata === 'object';
+  if (!hasMeta && !hasMetadata) {
+    errors.push('元数据 meta/metadata 缺失或格式不正确。');
   }
 
   const metaInput = (input.metadata ?? input.meta ?? {}) as Record<
@@ -138,15 +67,9 @@ export function validateBankSchema(raw: unknown): ValidationResult {
   const bankName = String(metaInput.name ?? courseName ?? '').trim();
   const author = String(metaInput.author ?? '').trim();
 
-  if (!bankName) {
-    errors.push('元数据缺少题库名称（name）。');
-  }
-  if (!courseName) {
-    errors.push('元数据缺少课程名称（course）。');
-  }
-  if (!author) {
-    errors.push('元数据缺少作者（author）。');
-  }
+  if (!bankName) errors.push('元数据缺少题库名称（name）。');
+  if (!courseName) errors.push('元数据缺少课程名称（course）。');
+  if (!author) errors.push('元数据缺少作者（author）。');
 
   const questionsInput = input.questions;
   if (!Array.isArray(questionsInput) || questionsInput.length === 0) {
@@ -225,19 +148,15 @@ export function validateBankSchema(raw: unknown): ValidationResult {
     });
   }
 
-  if (errors.length > 0) {
-    return { errors };
-  }
+  if (errors.length > 0) return { errors };
 
-  const sourceRaw = metaInput.source;
   const source =
-    typeof sourceRaw === 'string' && sourceRaw.trim()
-      ? sourceRaw.trim()
+    typeof metaInput.source === 'string' && metaInput.source.trim()
+      ? metaInput.source.trim()
       : undefined;
-  const sourceUrlRaw = metaInput.sourceUrl;
   const sourceUrl =
-    typeof sourceUrlRaw === 'string' && sourceUrlRaw.trim()
-      ? sourceUrlRaw.trim()
+    typeof metaInput.sourceUrl === 'string' && metaInput.sourceUrl.trim()
+      ? metaInput.sourceUrl.trim()
       : undefined;
 
   const meta: BankMeta = {

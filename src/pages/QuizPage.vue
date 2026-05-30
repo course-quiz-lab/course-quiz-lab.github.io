@@ -58,7 +58,7 @@ async function ensureAttempt(nextMode: Mode) {
     await router.replace('/import');
     return;
   }
-  const loaded = await attemptStore.loadSavedAttempt();
+  const loaded = await attemptStore.loadSavedAttempt(bankStore.bankId);
   // Resume only if saved attempt matches current bank AND mode
   if (
     loaded &&

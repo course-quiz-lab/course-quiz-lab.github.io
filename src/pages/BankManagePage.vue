@@ -29,12 +29,67 @@ async function handleDelete(entry: BankMetaEntry) {
   }
 }
 
+const EXPORT_SCHEMA_URL =
+  'https://course-quiz-lab.github.io/json-schema/v1/bank.schema.json';
+
+/** 字母标签 → 数字索引: A→0, B→1, ... */
+function labelToIndex(label: string): number {
+  return label.toUpperCase().charCodeAt(0) - 65;
+}
+
+/**
+ * 将内部 Bank 格式转换为符合 schema 的导出格式。
+ * 转换要点：
+ *  - meta → metadata
+ *  - options: {id,text,index}[] → string[]
+ *  - answer: 字母标签数组 → 数字索引 / 布尔值
+ */
+function toSchemaFormat(bank: Bank) {
+  const { meta, questions, ...rest } = bank;
+  // 排除仅内部使用的字段：id（题库标识）、total（导入时会自动重新计算）
+  const { id: _id, total: _total, ...metadata } = meta;
+  return {
+    ...rest,
+    metadata,
+    questions: questions.map((q) => {
+      const base: Record<string, unknown> = {
+        type: q.type,
+        stem: q.stem,
+        analysis: q.analysis,
+        difficulty: q.difficulty,
+      };
+
+      // options: 对象数组 → 字符串数组（判断题不输出此字段）
+      if (q.type !== 'judge') {
+        base.options = q.options.map((o) => o.text);
+      }
+
+      // answer: 字母标签 → schema 格式
+      if (q.type === 'judge') {
+        base.answer = q.answer.includes('T');
+      } else if (q.type === 'single') {
+        const idx = q.answer.length > 0 ? labelToIndex(q.answer[0]) : 0;
+        base.answer = idx;
+      } else {
+        // multiple / indeterminate
+        base.answer = q.answer.map((label) => labelToIndex(label));
+      }
+
+      return base;
+    }),
+  };
+}
+
 async function handleExport(entry: BankMetaEntry) {
   exportingId.value = entry.bankId;
   try {
     const bank: Bank | undefined = await loadBank(entry.bankId);
     if (!bank) return;
-    const json = JSON.stringify(bank, null, 2);
+    const exportData = {
+      ...toSchemaFormat(bank),
+      $schema: EXPORT_SCHEMA_URL,
+    };
+    const json = JSON.stringify(exportData, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

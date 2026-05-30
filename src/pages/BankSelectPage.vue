@@ -1,29 +1,54 @@
 <script setup lang="ts">
+import { mdiCogOutline, mdiPlus, mdiReload } from '@mdi/js';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { listBankMetas, loadBank } from '../utils/idb';
-import type { Bank, BankMetaEntry, QuestionType } from '../types/quiz';
-import { mdiCogOutline, mdiPlus } from '@mdi/js';
 import AppButton from '../components/ui/AppButton.vue';
 import AppCard from '../components/ui/AppCard.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
+import { useAttemptStore } from '../stores/attempt';
+import { useBankStore } from '../stores/bank';
+import type { Bank, BankMetaEntry, QuestionType } from '../types/quiz';
+import { listAttemptBankIds, listBankMetas, loadBank } from '../utils/idb';
 
 const router = useRouter();
+const attemptStore = useAttemptStore();
+const bankStore = useBankStore();
 
 const bankMetas = ref<BankMetaEntry[]>([]);
 const selectedBankId = ref<string | null>(null);
 const selectedBank = ref<Bank | null>(null);
 const isLoading = ref(true);
+/** Set of bank IDs that have a saved attempt */
+const attemptBankIds = ref<Set<string>>(new Set());
 
 onMounted(async () => {
   bankMetas.value = await listBankMetas();
+  attemptBankIds.value = new Set(await listAttemptBankIds());
   isLoading.value = false;
+  // 只有一个题库时自动选中
+  if (bankMetas.value.length === 1) {
+    await selectBank(bankMetas.value[0]);
+  }
 });
+
+function hasSavedProgress(bankId: string) {
+  return attemptBankIds.value.has(bankId);
+}
 
 async function selectBank(entry: BankMetaEntry) {
   selectedBankId.value = entry.bankId;
   const full = await loadBank(entry.bankId);
   selectedBank.value = full ?? null;
+}
+
+async function resumeFromBank(bankId: string) {
+  const full = await loadBank(bankId);
+  if (!full) return;
+  bankStore.setBank(full);
+  const loaded = await attemptStore.loadSavedAttempt(bankId);
+  if (loaded && attemptStore.attempt) {
+    router.push(`/${attemptStore.attempt.mode}`);
+  }
 }
 
 const currentEntry = computed(() =>
@@ -106,6 +131,13 @@ function goToImport() {
             <div class="block text-[11px] text-muted/70 mt-0.5">
               {{ entry.meta.total ?? '?' }} 题 ·
               {{ entry.meta.author || '未知作者' }}
+            </div>
+            <div v-if="hasSavedProgress(entry.bankId)" class="mt-1">
+              <span
+                class="text-[10px] bg-brand/10 text-brand px-1.5 py-0.5 rounded-full font-medium"
+              >
+                有上次进度
+              </span>
             </div>
           </button>
         </div>
@@ -205,7 +237,18 @@ function goToImport() {
           </AppCard>
         </div>
 
-        <div class="border-t border-[color:var(--border)] pt-5">
+        <div
+          class="border-t border-[color:var(--border)] pt-5 flex flex-wrap gap-3"
+        >
+          <AppButton
+            v-if="selectedBankId && hasSavedProgress(selectedBankId)"
+            :icon-path="mdiReload"
+            :icon-size="18"
+            variant="secondary"
+            @click="resumeFromBank(selectedBankId!)"
+          >
+            继续上次练习
+          </AppButton>
           <AppButton
             :icon-path="mdiCogOutline"
             :icon-size="18"

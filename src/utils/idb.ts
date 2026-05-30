@@ -30,14 +30,13 @@ interface QuizDb extends DBSchema {
 const DB_NAME = 'quiz-lab';
 const DB_VERSION = 2;
 const LAST_BANK_KEY = 'last-bank-id';
-const MAX_BANKS = 10;
 
 let dbPromise: ReturnType<typeof openDB<QuizDb>> | null = null;
 
 function getDb() {
   if (!dbPromise) {
     dbPromise = openDB<QuizDb>(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion, _newVersion, transaction) {
+      upgrade(db, oldVersion, _newVersion, _transaction) {
         if (oldVersion < 1) {
           db.createObjectStore('banks');
           db.createObjectStore('attempts');
@@ -52,8 +51,6 @@ function getDb() {
   return dbPromise;
 }
 
-const ATTEMPT_KEY = 'latest';
-
 // ── Banks ────────────────────────────────────────────────
 
 export async function saveBank(bankId: string, bank: Bank) {
@@ -61,10 +58,7 @@ export async function saveBank(bankId: string, bank: Bank) {
   const raw = JSON.parse(JSON.stringify(toRaw(bank)));
   await db.put('banks', raw, bankId);
   await db.put('meta', bankId, LAST_BANK_KEY);
-  // Also persist lightweight meta for listing
   await saveBankMeta(bankId, bank.meta);
-  // Enforce 10-bank limit (skip if bank already existed → it's an update)
-  await enforceBankLimit(MAX_BANKS, bankId);
 }
 
 export async function loadBank(bankId: string) {
@@ -76,11 +70,7 @@ export async function clearBank(bankId: string) {
   const db = await getDb();
   await db.delete('banks', bankId);
   await db.delete('bank-metas', bankId);
-  // Also clear global attempt if it belongs to this bank
-  const saved = await loadAttempt();
-  if (saved?.bankId === bankId) {
-    await clearAttempt();
-  }
+  await clearAttempt(bankId);
 }
 
 export async function getLastBankId() {
@@ -118,42 +108,32 @@ export async function bankMetaExists(bankId: string): Promise<boolean> {
   return !!entry;
 }
 
-/**
- * If total metas exceed `max`, delete oldest entries.
- * `skipBankId` — if that bank already exists in the store, it's an update, not a new import.
- */
-export async function enforceBankLimit(max = MAX_BANKS, skipBankId?: string) {
-  const db = await getDb();
-  const all = await db.getAll('bank-metas');
-  const isUpdate = skipBankId
-    ? all.some((e) => e.bankId === skipBankId)
-    : false;
-  if (isUpdate) return;
-  if (all.length <= max) return;
-  all.sort((a, b) => a.importedAt - b.importedAt);
-  const toDelete = all.slice(0, all.length - max);
-  for (const entry of toDelete) {
-    await clearBank(entry.bankId);
-  }
-}
-
-// ── Attempts (single latest) ────────────────────────────
+// ── Attempts (one per bank) ────────────────────────────
 
 export async function saveAttempt(attempt: AttemptState) {
   const db = await getDb();
   await db.put(
     'attempts',
     JSON.parse(JSON.stringify(toRaw(attempt))),
-    ATTEMPT_KEY,
+    attempt.bankId,
   );
 }
 
-export async function loadAttempt(): Promise<AttemptState | undefined> {
+export async function loadAttempt(
+  bankId: string,
+): Promise<AttemptState | undefined> {
   const db = await getDb();
-  return db.get('attempts', ATTEMPT_KEY);
+  return db.get('attempts', bankId);
 }
 
-export async function clearAttempt() {
+export async function clearAttempt(bankId: string) {
   const db = await getDb();
-  await db.delete('attempts', ATTEMPT_KEY);
+  await db.delete('attempts', bankId);
+}
+
+/** 列出所有有作答记录的题库 ID */
+export async function listAttemptBankIds(): Promise<string[]> {
+  const db = await getDb();
+  const keys = await db.getAllKeys('attempts');
+  return keys.filter((k): k is string => typeof k === 'string');
 }

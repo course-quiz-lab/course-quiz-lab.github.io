@@ -49,9 +49,9 @@ export const useAttemptStore = defineStore('attempt', {
     isSubmitted: (state) => !!state.attempt?.submittedAt,
   },
   actions: {
-    /** Load the latest saved attempt. Returns true if found. */
-    async loadSavedAttempt() {
-      const saved = await loadAttempt();
+    /** Load saved attempt for a given bank. Returns true if found. */
+    async loadSavedAttempt(bankId: string) {
+      const saved = await loadAttempt(bankId);
       if (saved) {
         this.attempt = saved;
         return true;

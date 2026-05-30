@@ -6,7 +6,7 @@ import AppIcon from './AppIcon.vue';
 const props = withDefaults(
   defineProps<{
     to?: string;
-    variant?: 'solid' | 'ghost';
+    variant?: 'solid' | 'ghost' | 'secondary';
     type?: 'button' | 'submit' | 'reset';
     disabled?: boolean;
     iconPath?: string;
@@ -26,7 +26,9 @@ const classes = computed(() => [
   'select-none inline-flex items-center gap-2 border-none rounded-full px-[18px] py-[10px] text-sm cursor-pointer transition-transform duration-200 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed',
   props.variant === 'ghost'
     ? 'bg-transparent text-brand-strong border border-[rgba(43,34,24,0.12)]'
-    : 'bg-brand text-white',
+    : props.variant === 'secondary'
+      ? 'bg-surface-soft text-brand-strong border border-[color:var(--border)]'
+      : 'bg-brand text-white',
   props.disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : '',
 ]);
 </script>

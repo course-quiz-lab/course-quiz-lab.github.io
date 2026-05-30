@@ -2,7 +2,6 @@
 import { mdiGithub, mdiRefresh, mdiMagnify, mdiSortVariant } from '@mdi/js';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import ImportStepIndicator from '../../components/import/ImportStepIndicator.vue';
 import AppButton from '../../components/ui/AppButton.vue';
 import AppCard from '../../components/ui/AppCard.vue';
 import AppIcon from '../../components/ui/AppIcon.vue';
@@ -134,11 +133,12 @@ async function downloadBank(entry: CloudBankEntry) {
       return;
     }
     if (!result.bank) return;
+    result.bank.meta.importMethod = 'cloud';
     await bankStore.setBank(result.bank);
     if (bankStore.bankId) {
-      const saved = await loadAttempt();
-      if (saved?.bankId === bankStore.bankId) {
-        await clearAttempt();
+      const saved = await loadAttempt(bankStore.bankId);
+      if (saved) {
+        await clearAttempt(bankStore.bankId);
       }
     }
     router.push('/banks');
@@ -151,8 +151,7 @@ async function downloadBank(entry: CloudBankEntry) {
 </script>
 
 <template>
-  <div class="max-w-[1024px] mx-auto px-4 flex flex-col gap-4 sm:gap-5">
-    <ImportStepIndicator :current-step="2" />
+  <div>
     <AppCard class="!p-4 sm:!p-5">
       <!-- Header -->
       <div class="flex items-center gap-2 mb-4">
@@ -289,7 +288,7 @@ async function downloadBank(entry: CloudBankEntry) {
 
         <!-- Updated time -->
         <div v-if="updatedAt" class="text-xs text-muted/40 text-center mt-6">
-          索引更新于 {{ new Date(updatedAt).toLocaleString('zh-CN') }}
+          索引最后构建于 {{ new Date(updatedAt).toLocaleString('zh-CN') }}
         </div>
 
         <!-- Empty -->

@@ -7,7 +7,7 @@ import {
   type QuestionItem,
   type QuestionType,
 } from '../types/quiz';
-import { normalizeType as normalizeTypeBase } from './validation';
+import { normalizeType as normalizeTypeBase } from './bankNormalize';
 
 function normalizeExcelType(raw: unknown): QuestionType | null {
   if (raw === undefined || raw === null) return null;

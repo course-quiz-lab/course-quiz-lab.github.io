@@ -216,7 +216,7 @@ function handleKeydown(e: KeyboardEvent) {
       </QuestionCard>
       <div class="flex justify-between items-center gap-[12px]">
         <AppButton
-          variant="ghost"
+          variant="secondary"
           :disabled="attempt.currentIndex === 0"
           @click="attemptStore.prevQuestion(total)"
         >

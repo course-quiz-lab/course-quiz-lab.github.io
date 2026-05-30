@@ -8,7 +8,6 @@ import {
 } from '@mdi/js';
 import { useRouter } from 'vue-router';
 import type { ImportMethod } from '../../types/quiz';
-import ImportStepIndicator from '../../components/import/ImportStepIndicator.vue';
 import AppCard from '../../components/ui/AppCard.vue';
 import AppIcon from '../../components/ui/AppIcon.vue';
 import { useImportStore } from '../../stores/import';
@@ -82,8 +81,7 @@ function handleSelect(method: ImportMethod) {
 </script>
 
 <template>
-  <div class="max-w-[600px] mx-auto px-4 flex flex-col gap-4 sm:gap-5">
-    <ImportStepIndicator :current-step="1" />
+  <div class="max-w-[576px] mx-auto">
     <AppCard class="max-sm:p-3">
       <div class="flex items-center gap-2 mb-3">
         <span
