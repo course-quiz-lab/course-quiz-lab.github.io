@@ -3,7 +3,8 @@ import { mdiDeleteOutline, mdiFileDownloadOutline } from '@mdi/js';
 import { onMounted, ref } from 'vue';
 import AppButton from '../components/ui/AppButton.vue';
 import AppCard from '../components/ui/AppCard.vue';
-import type { Bank, BankMetaEntry } from '../types/quiz';
+import PageLayout from '../components/ui/PageLayout.vue';
+import type { Bank, BankMetaEntry } from '../types/bank';
 import { clearBank, listBankMetas, loadBank } from '../utils/idb';
 
 const bankMetas = ref<BankMetaEntry[]>([]);
@@ -107,11 +108,7 @@ async function handleExport(entry: BankMetaEntry) {
 </script>
 
 <template>
-  <div class="page">
-    <div class="flex items-center gap-3 mb-6">
-      <h1 class="text-3xl max-sm:text-2xl m-0">管理题库</h1>
-    </div>
-
+  <PageLayout title="管理题库">
     <!-- Loading -->
     <div v-if="isLoading" class="text-muted text-sm">加载中…</div>
 
@@ -121,7 +118,7 @@ async function handleExport(entry: BankMetaEntry) {
       class="text-center py-16 bg-surface rounded-2xl border border-[color:var(--border)]"
     >
       <p class="text-muted mb-4">还没有导入过题库</p>
-      <AppButton :to="'/import'">去导入</AppButton>
+      <AppButton :to="'/import'" variant="secondary">去导入</AppButton>
     </div>
 
     <!-- Bank list -->
@@ -170,5 +167,5 @@ async function handleExport(entry: BankMetaEntry) {
         </div>
       </AppCard>
     </div>
-  </div>
+  </PageLayout>
 </template>

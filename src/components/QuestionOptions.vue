@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import {
-  isMultiSelectType,
-  type OptionItem,
-  type QuestionItem,
-} from '../types/quiz';
+import type { QuestionItem } from '../types/bank';
+import type { OptionItem } from '../types/core';
+import { isMultiSelectType } from '../types/core';
 
 const props = defineProps<{
   question: QuestionItem;

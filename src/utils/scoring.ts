@@ -1,4 +1,5 @@
-import { isMultiSelectType, type QuestionItem } from '../types/quiz';
+import { isMultiSelectType } from '../types/core';
+import type { QuestionItem } from '../types/bank';
 
 export type AnswerStatus = 'correct' | 'partial' | 'wrong' | 'unanswered';
 

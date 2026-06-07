@@ -7,17 +7,19 @@ import AppCard from '../../components/ui/AppCard.vue';
 import AppIcon from '../../components/ui/AppIcon.vue';
 import Pagination from '../../components/ui/Pagination.vue';
 import { useBankStore } from '../../stores/bank';
+import { useImportStore } from '../../stores/import';
 import type { CloudBankEntry, CloudBankIndex } from '../../types/quiz';
 import { clearAttempt, loadAttempt } from '../../utils/idb';
 import { validateBankSchema } from '../../utils/validation';
 
 const CLOUD_INDEX_URL = 'https://course-quiz-lab.github.io/store/index.json';
-const PAGE_SIZE = 18;
+const PAGE_SIZE = 10;
 
 type SortKey = 'name' | 'course' | 'total';
 
 const router = useRouter();
 const bankStore = useBankStore();
+const importStore = useImportStore();
 
 const banks = ref<CloudBankEntry[]>([]);
 const isLoading = ref(true);
@@ -141,7 +143,9 @@ async function downloadBank(entry: CloudBankEntry) {
         await clearAttempt(bankStore.bankId);
       }
     }
-    router.push('/banks');
+    const redirect = importStore.returnTo;
+    importStore.returnTo = null;
+    router.push(redirect ?? '/papers');
   } catch {
     alert('下载失败，请检查网络连接后重试。');
   } finally {
@@ -245,7 +249,7 @@ async function downloadBank(entry: CloudBankEntry) {
         </p>
 
         <!-- Card grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div
             v-for="entry in paginatedBanks"
             :key="entry.url"

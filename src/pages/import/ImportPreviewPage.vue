@@ -50,8 +50,8 @@ function typePillClass(type: string): string {
 }
 
 async function confirmImport() {
-  await importStore.confirmImport();
-  router.push('/banks');
+  const redirect = await importStore.confirmImport();
+  router.push(redirect ?? '/papers');
 }
 </script>
 

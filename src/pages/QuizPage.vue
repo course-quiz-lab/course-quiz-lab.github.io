@@ -1,45 +1,41 @@
 <script setup lang="ts">
+import {
+  mdiBroom,
+  mdiCardTextOutline,
+  mdiCheckCircleOutline,
+  mdiClipboardTextOutline,
+  mdiFileDocumentMultipleOutline,
+} from '@mdi/js';
 import { computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useAttemptStore } from '../stores/attempt';
-import { useBankStore } from '../stores/bank';
-import type { Mode } from '../types/quiz';
-import {
-  mdiCardTextOutline,
-  mdiFileDocumentMultipleOutline,
-  mdiClipboardTextOutline,
-  mdiCheckCircleOutline,
-  mdiBroom,
-} from '@mdi/js';
 import FullPaperView from '../components/FullPaperView.vue';
 import SingleQuestionView from '../components/SingleQuestionView.vue';
-import AppButton from '../components/ui/AppButton.vue';
 import TimerChip from '../components/TimerChip.vue';
+import AppButton from '../components/ui/AppButton.vue';
+import { useAttemptStore } from '../stores/attempt';
+import { usePaperStore } from '../stores/paper';
 
-const bankStore = useBankStore();
+const paperStore = usePaperStore();
 const attemptStore = useAttemptStore();
 const router = useRouter();
 const route = useRoute();
 
-const bank = computed(() => bankStore.bank);
+const paper = computed(() => paperStore.paper);
 const attempt = computed(() => attemptStore.attempt);
 
-const mode = computed<Mode>(() =>
-  route.params.mode === 'exam' ? 'exam' : 'practice',
-);
-const isExam = computed(() => mode.value === 'exam');
+const isExam = computed(() => attempt.value?.mode === 'exam');
 
 const answeredCount = computed(() => {
-  if (!bank.value || !attempt.value) return 0;
-  return bank.value.questions.filter((question) => {
+  if (!paper.value || !attempt.value) return 0;
+  return paper.value.questions.filter((question) => {
     const length = attempt.value?.answers[question.id]?.selected.length ?? 0;
     return length > 0;
   }).length;
 });
 
 const unansweredCount = computed(() => {
-  if (!bank.value || !attempt.value) return 0;
-  return bank.value.questions.filter((question) => {
+  if (!paper.value || !attempt.value) return 0;
+  return paper.value.questions.filter((question) => {
     return attempt.value?.answers[question.id]?.selected.length === 0;
   }).length;
 });
@@ -53,38 +49,38 @@ const viewToggleIcon = computed(() =>
     : mdiFileDocumentMultipleOutline,
 );
 
-async function ensureAttempt(nextMode: Mode) {
-  if (!bankStore.bank || !bankStore.bankId) {
-    await router.replace('/import');
+async function ensureAttempt() {
+  const paperId = route.params.paperId as string;
+  const attemptId = route.params.attemptId as string;
+
+  if (!paperId || !attemptId) {
+    await router.replace('/papers');
     return;
   }
-  const loaded = await attemptStore.loadSavedAttempt(bankStore.bankId);
-  // Resume only if saved attempt matches current bank AND mode
-  if (
-    loaded &&
-    attemptStore.attempt?.bankId === bankStore.bankId &&
-    attemptStore.attempt?.mode === nextMode
-  ) {
-    return;
+
+  if (!paperStore.paper || paperStore.paper.id !== paperId) {
+    const loadedPaper = await paperStore.loadPaper(paperId);
+    if (!loadedPaper) {
+      await router.replace('/papers');
+      return;
+    }
   }
-  // Otherwise start a fresh attempt (overwrites any old one)
-  const sq = attemptStore._pendingShuffleQuestions;
-  const so = attemptStore._pendingShuffleOptions;
-  attemptStore._pendingShuffleQuestions = false;
-  attemptStore._pendingShuffleOptions = false;
-  await attemptStore.startAttempt(
-    bankStore.bankId,
-    nextMode,
-    bankStore.bank.questions,
-    sq,
-    so,
-  );
+
+  if (!attemptStore.attempt || attemptStore.attempt.id !== attemptId) {
+    const loadedAttempt = await attemptStore.loadSavedAttempt(attemptId);
+    if (!loadedAttempt) {
+      await router.replace('/papers');
+      return;
+    }
+  }
 }
 
 watch(
-  () => route.name,
+  () => [route.params.paperId, route.params.attemptId],
   async () => {
-    await ensureAttempt(mode.value);
+    if (route.name === 'quiz') {
+      await ensureAttempt();
+    }
   },
   { immediate: true },
 );
@@ -96,18 +92,22 @@ async function submitExam() {
     if (!ok) return;
   }
   await attemptStore.submitExam();
-  await router.push('/review');
+  await router.push(
+    `/review?paperId=${paper.value?.id}&attemptId=${attempt.value?.id}`,
+  );
 }
 
-async function resetProgress() {
-  if (!bankStore.bank || !bankStore.bankId) return;
+async function startNewAttempt() {
+  if (!paper.value) return;
   const label = isExam.value ? '考试' : '练习';
-  if (!confirm(`确认清空${label}进度？`)) return;
-  await attemptStore.resetAttempt(
-    bankStore.bankId,
-    mode.value,
-    bankStore.bank.questions,
+  if (!confirm(`确认重新生成一次${label}作答？这不会覆盖您之前的作答记录。`))
+    return;
+  const newAttemptId = await attemptStore.resetAttempt(
+    paper.value.id,
+    attempt.value!.mode,
+    paper.value.questions,
   );
+  await router.push(`/quiz/${paper.value.id}/attempt/${newAttemptId}`);
 }
 
 function toggleView() {
@@ -118,7 +118,7 @@ function toggleView() {
 </script>
 
 <template>
-  <div v-if="bank && attempt" class="page">
+  <div v-if="paper && attempt" class="page">
     <section
       class="flex items-end justify-between gap-[26px] max-sm:flex-col max-sm:items-start"
     >
@@ -127,13 +127,11 @@ function toggleView() {
           {{ isExam ? '考试模式' : '练习模式' }}
         </div>
         <div class="text-muted text-sm" v-if="isExam">
-          {{ bank.meta.name || bank.meta.course || '未命名课程' }} · 未作答
-          {{ unansweredCount }} 题
+          {{ paper.title }} · 未作答 {{ unansweredCount }} 题
         </div>
         <div class="text-muted text-sm" v-else>
-          {{ bank.meta.name || bank.meta.course || '未命名课程' }} · 已作答
-          {{ answeredCount }} /
-          {{ bank.questions.length }}
+          {{ paper.title }} · 已作答 {{ answeredCount }} /
+          {{ paper.questions.length }}
         </div>
       </div>
       <div class="flex flex-wrap gap-[8px] sm:gap-[12px]">
@@ -152,7 +150,9 @@ function toggleView() {
         <AppButton
           v-if="!isExam"
           variant="ghost"
-          @click="router.push('/review')"
+          @click="
+            router.push(`/review?paperId=${paper.id}&attemptId=${attempt.id}`)
+          "
           :icon-path="mdiClipboardTextOutline"
         >
           查看小结
@@ -164,8 +164,12 @@ function toggleView() {
         >
           交卷
         </AppButton>
-        <AppButton variant="ghost" @click="resetProgress" :icon-path="mdiBroom">
-          清空进度
+        <AppButton
+          variant="ghost"
+          @click="startNewAttempt"
+          :icon-path="mdiBroom"
+        >
+          再做一次
         </AppButton>
       </div>
     </section>

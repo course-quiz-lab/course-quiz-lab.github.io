@@ -1,110 +1,81 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import StatusPill from '../components/StatusPill.vue';
+import AppIcon from '../components/ui/AppIcon.vue';
+import PageLayout from '../components/ui/PageLayout.vue';
 import Pagination from '../components/ui/Pagination.vue';
-import type { BankMetaEntry, QuestionItem, QuestionType } from '../types/quiz';
-import {
-  listAttemptBankIds,
-  listBankMetas,
-  loadAttempt,
-  loadBank,
-} from '../utils/idb';
+import type { QuestionItem } from '../types/bank';
+import type { QuestionType } from '../types/core';
+import type { Paper, PaperAttempt } from '../types/quiz';
+import { loadPaper, loadPaperAttempt } from '../utils/idb';
 import { evaluateStatus } from '../utils/scoring';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 15;
 
-const bankMetas = ref<BankMetaEntry[]>([]);
-const selectedIds = ref<Set<string>>(new Set());
+const route = useRoute();
+const router = useRouter();
+
+const paper = ref<Paper | null>(null);
+const attempt = ref<PaperAttempt | null>(null);
 const isLoading = ref(true);
-const attemptedBankIds = ref<Set<string>>(new Set());
 
 onMounted(async () => {
-  bankMetas.value = await listBankMetas();
-  attemptedBankIds.value = new Set(await listAttemptBankIds());
-  for (const entry of bankMetas.value) {
-    if (attemptedBankIds.value.has(entry.bankId)) {
-      selectedIds.value.add(entry.bankId);
-    }
+  const paperId = route.query.paperId as string;
+  const attemptId = route.query.attemptId as string;
+
+  if (!paperId || !attemptId) {
+    router.replace('/papers');
+    return;
   }
+
+  const [p, a] = await Promise.all([
+    loadPaper(paperId),
+    loadPaperAttempt(attemptId),
+  ]);
+
+  paper.value = p ?? null;
+  attempt.value = a ?? null;
   isLoading.value = false;
 });
 
-function toggleBank(bankId: string) {
-  const next = new Set(selectedIds.value);
-  if (next.has(bankId)) next.delete(bankId);
-  else next.add(bankId);
-  selectedIds.value = next;
-  currentPage.value = 1;
-}
+const wrongQuestions = computed(() => {
+  if (!paper.value || !attempt.value) return [];
+  const list: { question: QuestionItem; status: string }[] = [];
 
-// ── 收集错题 ────────────────────────────────────────────
+  for (const question of paper.value.questions) {
+    const entry = attempt.value.answers[question.id];
+    if (!entry) continue;
 
-interface WrongItem {
-  bankName: string;
-  question: QuestionItem;
-  yourAnswer: string[];
-}
-
-const wrongList = ref<WrongItem[]>([]);
-const loadingWrong = ref(false);
-
-async function collectWrong() {
-  loadingWrong.value = true;
-  const result: WrongItem[] = [];
-
-  for (const bankId of selectedIds.value) {
-    const bank = await loadBank(bankId);
-    const attempt = await loadAttempt(bankId);
-    if (!bank || !attempt) continue;
-
-    const questions = attempt.questionOrder
-      ? attempt.questionOrder
-          .map((id) => bank.questions.find((q) => q.id === id))
-          .filter((q): q is QuestionItem => !!q)
-      : bank.questions;
-
-    const shuffled = attempt.shuffledQuestions ?? {};
-
-    for (const q of questions) {
-      const answer = attempt.answers[q.id];
-      if (!answer || answer.selected.length === 0) continue;
-
-      const evalQ = shuffled[q.id] ?? q;
-      const status = evaluateStatus(evalQ, answer.selected);
-      if (status === 'wrong' || status === 'partial') {
-        result.push({
-          bankName: bank.meta.name,
-          question: q,
-          yourAnswer: answer.selected,
-        });
-      }
+    const status = evaluateStatus(question, entry.selected);
+    if (status !== 'correct' && status !== 'unanswered') {
+      list.push({ question, status });
     }
   }
+  return list;
+});
 
-  wrongList.value = result;
-  loadingWrong.value = false;
-  currentPage.value = 1;
-}
-
-// ── 分页 ────────────────────────────────────────────────
-
-const currentPage = ref(1);
 const totalPages = computed(() =>
-  Math.ceil(wrongList.value.length / PAGE_SIZE),
+  Math.max(1, Math.ceil(wrongQuestions.value.length / PAGE_SIZE)),
 );
-const pagedWrong = computed(() => {
+const currentPage = ref(1);
+
+const pagedQuestions = computed(() => {
   const start = (currentPage.value - 1) * PAGE_SIZE;
-  return wrongList.value.slice(start, start + PAGE_SIZE);
+  return wrongQuestions.value.slice(start, start + PAGE_SIZE);
 });
 
 function typeLabel(type: QuestionType) {
-  if (type === 'single') return '单选';
-  if (type === 'multiple') return '多选';
-  if (type === 'indeterminate') return '不定项';
-  return '判断';
+  const map: Record<QuestionType, string> = {
+    single: '单选',
+    multiple: '多选',
+    indeterminate: '不定项',
+    judge: '判断',
+  };
+  return map[type] || '未知';
 }
 
-function answerLabel(question: QuestionItem) {
+function formatAnswer(question: QuestionItem) {
   if (question.type === 'judge') {
     return question.answer
       .map((id) => (id === 'T' ? '正确' : '错误'))
@@ -113,108 +84,106 @@ function answerLabel(question: QuestionItem) {
   return question.answer.join(' / ');
 }
 
-function yourLabel(question: QuestionItem, your: string[]) {
+function userSelectedFormat(question: QuestionItem, selectedIds: string[]) {
+  if (selectedIds.length === 0) return '未作答';
   if (question.type === 'judge') {
-    return your.map((id) => (id === 'T' ? '正确' : '错误')).join(' / ');
+    return selectedIds.map((id) => (id === 'T' ? '正确' : '错误')).join(' / ');
   }
-  return your.join(' / ');
+  return selectedIds.join(' / ');
 }
 </script>
 
 <template>
-  <div class="page">
-    <div class="flex items-center gap-3 mb-6">
-      <h1 class="text-3xl max-sm:text-2xl m-0">错题回顾</h1>
-    </div>
-
-    <div v-if="isLoading" class="text-muted text-sm">加载中…</div>
+  <PageLayout title="错题回顾" max-width="800px" show-back>
+    <div v-if="isLoading" class="text-muted text-sm pb-[100px]">加载中…</div>
 
     <template v-else>
-      <!-- 题库选择 -->
-      <section
-        v-if="wrongList.length === 0"
-        class="bg-surface rounded-2xl p-[26px] max-sm:p-4 border border-[color:var(--border)] grid gap-4 mb-6"
+      <div v-if="!paper || !attempt" class="text-muted text-sm pb-10">
+        查无记录或记录已删除。
+      </div>
+      <div
+        v-else-if="wrongQuestions.length === 0"
+        class="bg-surface rounded-2xl p-8 border border-[color:var(--border)] text-center text-muted"
       >
-        <div class="text-sm text-muted tracking-wide uppercase">选择题库</div>
-        <p v-if="bankMetas.length === 0" class="text-sm text-muted">
-          还没有导入过题库，导入并答题后可以在这里集中复习错题。
-        </p>
-        <div v-else class="flex flex-wrap gap-2">
-          <button
-            v-for="entry in bankMetas"
-            :key="entry.bankId"
-            class="px-4 py-2 rounded-xl border text-sm cursor-pointer transition-colors duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
-            :class="
-              selectedIds.has(entry.bankId)
-                ? 'border-brand bg-brand text-white'
-                : 'border-[color:var(--border)] bg-surface-soft text-muted hover:border-brand'
-            "
-            :disabled="!attemptedBankIds.has(entry.bankId)"
-            @click="toggleBank(entry.bankId)"
-          >
-            {{ entry.meta.name }}
-            <span class="text-[10px] opacity-70 ml-1">
-              {{ attemptedBankIds.has(entry.bankId) ? '有记录' : '无记录' }}
-            </span>
-          </button>
-        </div>
-        <div v-if="bankMetas.length > 0">
-          <button
-            class="select-none inline-flex items-center gap-2 border-none rounded-full px-[18px] py-[10px] text-sm cursor-pointer bg-brand text-white transition-transform duration-200 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-            :disabled="selectedIds.size === 0"
-            @click="collectWrong"
-          >
-            {{ loadingWrong ? '收集中…' : '开始回顾' }}
-          </button>
-        </div>
-      </section>
+        本次作答没有错题。
+      </div>
 
-      <!-- 错题列表 -->
-      <section
-        v-if="wrongList.length > 0"
-        class="bg-surface rounded-2xl p-[26px] max-sm:p-4 border border-[color:var(--border)] grid gap-4"
-      >
-        <div class="flex items-center justify-between">
-          <div class="text-sm text-muted tracking-wide uppercase">
-            错题与部分正确
-            <span class="ml-1 font-normal">（{{ wrongList.length }} 题）</span>
-          </div>
-          <button
-            class="text-sm text-brand bg-transparent border-none cursor-pointer hover:underline"
-            @click="wrongList = []"
-          >
-            重新选择
-          </button>
-        </div>
-
-        <ul
-          v-if="pagedWrong.length > 0"
-          class="list-none m-0 p-0 grid gap-[12px]"
+      <div v-else>
+        <div
+          class="bg-surface rounded-2xl p-5 border border-[color:var(--border)] mb-6 text-sm flex gap-6 max-sm:flex-col max-sm:gap-3"
         >
+          <div class="flex flex-col">
+            <span class="text-muted text-xs mb-1">所属试卷</span>
+            <span class="font-medium">{{ paper.title }}</span>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-muted text-xs mb-1">错题总数</span>
+            <span class="font-medium text-danger"
+              >{{ wrongQuestions.length }} 题</span
+            >
+          </div>
+          <div class="flex flex-col">
+            <span class="text-muted text-xs mb-1">作答时间</span>
+            <span class="font-medium">{{
+              new Date(attempt.startedAt).toLocaleString('zh-CN')
+            }}</span>
+          </div>
+        </div>
+
+        <ul class="list-none m-0 p-0 grid gap-4 mb-6">
           <li
-            v-for="(item, idx) in pagedWrong"
-            :key="idx"
-            class="p-4 rounded-xl border border-[color:var(--border)] bg-surface-review"
+            v-for="item in pagedQuestions"
+            :key="item.question.id"
+            class="bg-surface rounded-2xl p-5 border border-[color:var(--border)]"
           >
-            <div class="text-[11px] text-muted mb-1">{{ item.bankName }}</div>
-            <div class="mb-[6px]">{{ item.question.stem }}</div>
-            <div class="flex gap-[12px] flex-wrap items-center">
-              <StatusPill status="wrong" />
-              <span
-                class="bg-surface-chip rounded-full px-2.5 py-1 text-xs text-muted"
+            <div class="mb-4 text-base font-medium">
+              {{ item.question.stem }}
+            </div>
+
+            <div
+              v-if="item.question.options.length > 0"
+              class="mb-4 pl-4 border-l-2 border-[color:var(--border)]"
+            >
+              <div
+                v-for="opt in item.question.options"
+                :key="opt.id"
+                class="text-sm py-1"
               >
-                题型：{{ typeLabel(item.question.type) }}
+                <span class="font-medium mr-2">{{ opt.id }}.</span>
+                <span class="text-muted text-foreground">{{ opt.text }}</span>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+              <StatusPill :status="item.status as any" />
+              <span
+                class="bg-surface-chip rounded-full px-3 py-1 text-xs text-muted"
+              >
+                {{ typeLabel(item.question.type) }}
               </span>
               <span
-                class="bg-surface-chip rounded-full px-2.5 py-1 text-xs text-muted"
+                class="bg-surface-chip rounded-full px-3 py-1 text-xs text-muted"
               >
-                你的答案：{{ yourLabel(item.question, item.yourAnswer) }}
+                您的作答：{{
+                  userSelectedFormat(
+                    item.question,
+                    attempt.answers[item.question.id]?.selected || [],
+                  )
+                }}
               </span>
               <span
-                class="bg-surface-chip rounded-full px-2.5 py-1 text-xs text-muted"
+                class="bg-surface-chip rounded-full px-3 py-1 text-xs text-muted border border-brand/20 bg-brand/5 text-brand mix-blend-multiply"
               >
-                参考答案：{{ answerLabel(item.question) }}
+                参考答案：{{ formatAnswer(item.question) }}
               </span>
+            </div>
+
+            <div
+              v-if="item.question.analysis"
+              class="mt-4 pt-4 border-t border-[color:var(--border)] text-sm text-muted"
+            >
+              <span class="font-medium text-foreground mb-1 block">解析：</span>
+              {{ item.question.analysis }}
             </div>
           </li>
         </ul>
@@ -224,8 +193,9 @@ function yourLabel(question: QuestionItem, your: string[]) {
           :current="currentPage"
           :total="totalPages"
           @update:current="currentPage = $event"
+          class="pb-10"
         />
-      </section>
+      </div>
     </template>
-  </div>
+  </PageLayout>
 </template>

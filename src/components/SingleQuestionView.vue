@@ -1,20 +1,21 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick } from 'vue';
 import { useAttemptStore } from '../stores/attempt';
-import { useBankStore } from '../stores/bank';
+import { usePaperStore } from '../stores/paper';
 import { evaluateStatus } from '../utils/scoring';
-import { isMultiSelectType, type QuestionItem } from '../types/quiz';
+import { isMultiSelectType } from '../types/core';
+import type { QuestionItem } from '../types/bank';
 import AppButton from './ui/AppButton.vue';
 import QuestionCard from './QuestionCard.vue';
 import QuestionOptions from './QuestionOptions.vue';
 import QuizLayout from './QuizLayout.vue';
 
-const bankStore = useBankStore();
+const paperStore = usePaperStore();
 const attemptStore = useAttemptStore();
 
-const bank = computed(() => bankStore.bank);
+const paper = computed(() => paperStore.paper);
 const attempt = computed(() => attemptStore.attempt);
-const questions = computed(() => bank.value?.questions ?? []);
+const questions = computed(() => paper.value?.questions ?? []);
 
 const containerRef = ref<HTMLElement | null>(null);
 
@@ -25,19 +26,10 @@ watch(
     containerRef.value?.focus();
   },
 );
-const orderedQuestions = computed(() => {
-  if (!attempt.value?.questionOrder || !bank.value) return questions.value;
-  const qMap = new Map(bank.value.questions.map((q) => [q.id, q]));
-  return attempt.value.questionOrder
-    .map((id) => qMap.get(id))
-    .filter((q): q is QuestionItem => !!q);
-});
-const total = computed(() => orderedQuestions.value.length);
-const question = computed(() => {
-  const base = orderedQuestions.value[attempt.value?.currentIndex ?? 0];
-  if (!base || !attempt.value?.shuffledQuestions) return base;
-  return attempt.value.shuffledQuestions[base.id] ?? base;
-});
+const total = computed(() => questions.value.length);
+const question = computed(
+  () => questions.value[attempt.value?.currentIndex ?? 0],
+);
 const answerState = computed(() =>
   question.value ? attempt.value?.answers[question.value.id] : undefined,
 );
@@ -93,7 +85,7 @@ function answerStatusForQuestion(questionId: string) {
 }
 
 const allStatuses = computed(() =>
-  orderedQuestions.value.map((q) => answerStatusForQuestion(q.id)),
+  questions.value.map((q) => answerStatusForQuestion(q.id)),
 );
 
 const optionsDisabled = computed(() => {

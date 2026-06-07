@@ -10,12 +10,8 @@
  * 字母标签转换委托给 ./bank-label。
  */
 
-import {
-  isMultiSelectType,
-  type Bank,
-  type BankMeta,
-  type QuestionItem,
-} from '../types/quiz';
+import { isMultiSelectType } from '../types/core';
+import type { Bank, BankMeta, QuestionItem } from '../types/bank';
 import {
   normalizeAnswer,
   normalizeOptionList,

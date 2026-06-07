@@ -6,7 +6,8 @@
  * 为内部 QuestionItem 所使用的标准格式。
  */
 
-import type { OptionItem, QuestionItem, QuestionType } from '../types/quiz';
+import type { OptionItem, QuestionType } from '../types/core';
+import type { QuestionItem } from '../types/bank';
 import { asLabel, asNumericLabel, labelAt, toIndex } from './bankLabel';
 
 // ── Constants ───────────────────────────────────────────

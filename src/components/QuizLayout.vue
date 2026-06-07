@@ -6,9 +6,7 @@ const props = defineProps<{
   total: number;
   statuses: string[];
   currentIndex?: number;
-  /** For paginated mode (整卷视图): which page is active */
   currentPage?: number;
-  /** Items per page in paginated mode */
   pageSize?: number;
 }>();
 

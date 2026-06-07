@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import type { Bank } from '../types/quiz';
+import type { Bank } from '../types/bank';
 import { buildBankId } from '../utils/validation';
 import { clearBank, getLastBankId, loadBank, saveBank } from '../utils/idb';
 

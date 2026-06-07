@@ -7,10 +7,10 @@ import {
   mdiMicrosoftWord,
 } from '@mdi/js';
 import { useRouter } from 'vue-router';
-import type { ImportMethod } from '../../types/quiz';
 import AppCard from '../../components/ui/AppCard.vue';
 import AppIcon from '../../components/ui/AppIcon.vue';
 import { useImportStore } from '../../stores/import';
+import type { ImportMethod } from '../../types/quiz';
 
 interface MethodItem {
   id: ImportMethod;

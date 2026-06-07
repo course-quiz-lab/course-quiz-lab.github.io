@@ -1,36 +1,27 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
 import { mdiChevronLeft, mdiChevronRight } from '@mdi/js';
+import { computed, ref } from 'vue';
 import { useAttemptStore } from '../stores/attempt';
-import { useBankStore } from '../stores/bank';
+import { usePaperStore } from '../stores/paper';
+import type { QuestionType } from '../types/core';
+import { isMultiSelectType } from '../types/core';
 import { evaluateStatus } from '../utils/scoring';
-import {
-  isMultiSelectType,
-  type QuestionItem,
-  type QuestionType,
-} from '../types/quiz';
-import AppButton from './ui/AppButton.vue';
-import AppIcon from './ui/AppIcon.vue';
 import QuestionCard from './QuestionCard.vue';
 import QuestionOptions from './QuestionOptions.vue';
 import QuizLayout from './QuizLayout.vue';
+import AppButton from './ui/AppButton.vue';
+import AppIcon from './ui/AppIcon.vue';
 
 const PAGE_SIZE = 10;
 
-const bankStore = useBankStore();
+const paperStore = usePaperStore();
 const attemptStore = useAttemptStore();
 
-const bank = computed(() => bankStore.bank);
+const paper = computed(() => paperStore.paper);
 const attempt = computed(() => attemptStore.attempt);
-const questions = computed(() => bank.value?.questions ?? []);
-const orderedQuestions = computed(() => {
-  if (!attempt.value?.questionOrder || !bank.value) return questions.value;
-  const qMap = new Map(bank.value.questions.map((q) => [q.id, q]));
-  return attempt.value.questionOrder
-    .map((id) => qMap.get(id))
-    .filter((q): q is QuestionItem => !!q);
-});
-const total = computed(() => orderedQuestions.value.length);
+const questions = computed(() => paper.value?.questions ?? []);
+
+const total = computed(() => questions.value.length);
 
 const currentPage = ref(1);
 const totalPages = computed(() =>
@@ -38,7 +29,7 @@ const totalPages = computed(() =>
 );
 const currentQuestions = computed(() => {
   const start = (currentPage.value - 1) * PAGE_SIZE;
-  return orderedQuestions.value.slice(start, start + PAGE_SIZE);
+  return questions.value.slice(start, start + PAGE_SIZE);
 });
 
 function goToPage(page: number) {
@@ -75,13 +66,11 @@ const visiblePages = computed<(number | 'ellipsis')[]>(() => {
 });
 
 const allStatuses = computed(() =>
-  orderedQuestions.value.map((q) => answerStatus(q.id)),
+  questions.value.map((q) => answerStatus(q.id)),
 );
 
 function resolveQuestion(questionId: string) {
-  const base = questions.value.find((q) => q.id === questionId);
-  if (!base) return undefined;
-  return attempt.value?.shuffledQuestions?.[questionId] ?? base;
+  return questions.value.find((q) => q.id === questionId);
 }
 
 function answerStatus(questionId: string) {
@@ -163,7 +152,7 @@ function scrollToQuestion(index: number) {
 
 <template>
   <QuizLayout
-    v-if="bank && attempt"
+    v-if="paper && attempt"
     :total="total"
     :statuses="allStatuses"
     :current-page="currentPage"

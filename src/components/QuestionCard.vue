@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { QuestionItem } from '../types/quiz';
+import type { QuestionItem } from '../types/bank';
 import StatusPill from './StatusPill.vue';
 
 const props = defineProps<{

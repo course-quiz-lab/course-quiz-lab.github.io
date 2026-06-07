@@ -1,47 +1,49 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import StatusPill from '../components/StatusPill.vue';
 import AppButton from '../components/ui/AppButton.vue';
 import Pagination from '../components/ui/Pagination.vue';
 import { useAttemptStore } from '../stores/attempt';
-import { useBankStore } from '../stores/bank';
+import { usePaperStore } from '../stores/paper';
+import type { QuestionItem } from '../types/bank';
+import type { QuestionType } from '../types/core';
 import { evaluateStatus } from '../utils/scoring';
-import type { QuestionItem, QuestionType } from '../types/quiz';
 
 const PAGE_SIZE = 10;
 
-const bankStore = useBankStore();
-const attemptStore = useAttemptStore();
+const route = useRoute();
 const router = useRouter();
+const attemptStore = useAttemptStore();
+const paperStore = usePaperStore();
 
-const bank = computed(() => bankStore.bank);
+const paper = computed(() => paperStore.paper);
 const attempt = computed(() => attemptStore.attempt);
 
-const orderedQuestions = computed(() => {
-  if (!bank.value) return [];
-  if (!attempt.value?.questionOrder) return bank.value.questions;
-  const qMap = new Map(bank.value.questions.map((q) => [q.id, q]));
-  return attempt.value.questionOrder
-    .map((id) => qMap.get(id))
-    .filter((q): q is QuestionItem => !!q);
-});
+const questions = computed(() => paper.value?.questions || []);
 
-const resolvedQuestions = computed(() => {
-  const shuffled = attempt.value?.shuffledQuestions;
-  if (!shuffled) return orderedQuestions.value;
-  return orderedQuestions.value.map((q) => shuffled[q.id] ?? q);
+onMounted(async () => {
+  const paperId = route.query.paperId as string;
+  const attemptId = route.query.attemptId as string;
+  if (!paperId || !attemptId) {
+    router.replace('/papers');
+    return;
+  }
+  if (!paperStore.paper || paperStore.paper.id !== paperId) {
+    await paperStore.loadPaper(paperId);
+  }
+  if (!attemptStore.attempt || attemptStore.attempt.id !== attemptId) {
+    await attemptStore.loadSavedAttempt(attemptId);
+  }
 });
 
 const statusMap = computed(() => {
-  if (!bank.value || !attempt.value) return {};
-  const shuffled = attempt.value.shuffledQuestions;
-  return bank.value.questions.reduce<
+  if (!paper.value || !attempt.value) return {};
+  return paper.value.questions.reduce<
     Record<string, ReturnType<typeof evaluateStatus>>
   >((acc, question) => {
     const selected = attempt.value?.answers[question.id]?.selected ?? [];
-    const evalQuestion = shuffled?.[question.id] ?? question;
-    acc[question.id] = evaluateStatus(evalQuestion, selected);
+    acc[question.id] = evaluateStatus(question, selected);
     return acc;
   }, {});
 });
@@ -51,14 +53,14 @@ const statuses = computed(() => Object.values(statusMap.value));
 const correctCount = computed(
   () => statuses.value.filter((status) => status === 'correct').length,
 );
-const total = computed(() => orderedQuestions.value.length);
+const total = computed(() => questions.value.length);
 const percent = computed(() =>
   total.value ? Math.round((correctCount.value / total.value) * 100) : 0,
 );
 
 const incorrectList = computed(() => {
-  if (!bank.value) return [];
-  return resolvedQuestions.value.filter((question) => {
+  if (!paper.value) return [];
+  return questions.value.filter((question) => {
     const status = statusMap.value[question.id];
     return status !== 'correct' && status !== 'unanswered';
   });
@@ -97,7 +99,7 @@ function answerLabel(question: QuestionItem) {
 </script>
 
 <template>
-  <div v-if="bank && attempt" class="page">
+  <div v-if="paper && attempt" class="page">
     <section
       class="bg-surface rounded-2xl p-[26px] max-sm:p-4 border border-[rgba(43,34,24,0.12)] grid gap-4"
     >
@@ -125,13 +127,14 @@ function answerLabel(question: QuestionItem) {
         </div>
       </div>
       <div class="flex flex-wrap gap-[12px]">
-        <AppButton variant="secondary" @click="router.push('/practice')">
-          继续练习
+        <AppButton
+          v-if="!attempt.submittedAt"
+          variant="secondary"
+          @click="router.push(`/quiz/${paper.id}/attempt/${attempt.id}`)"
+        >
+          继续作答
         </AppButton>
-        <AppButton variant="secondary" @click="router.push('/exam')">
-          继续考试
-        </AppButton>
-        <AppButton @click="router.push('/import')">更换题库</AppButton>
+        <AppButton @click="router.push('/papers')">返回试卷列表</AppButton>
       </div>
     </section>
 

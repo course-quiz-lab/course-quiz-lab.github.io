@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { mdiAutoFix, mdiTable } from '@mdi/js';
 import { computed, ref, watch } from 'vue';
+import type { QuestionItem } from '../types/bank';
 import type {
   ColumnMapping,
   ExcelParseResult,
   ExcelSheetData,
-  QuestionItem,
-} from '../types/quiz';
+} from '../types/excel';
 import {
   autoDetectMapping,
   buildPreviewData,

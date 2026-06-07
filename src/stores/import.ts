@@ -1,10 +1,7 @@
 import { defineStore } from 'pinia';
-import type {
-  Bank,
-  ExcelParseResult,
-  ImportMethod,
-  QuestionItem,
-} from '../types/quiz';
+import type { ImportMethod } from '../types/core';
+import type { Bank, QuestionItem } from '../types/bank';
+import type { ExcelParseResult } from '../types/excel';
 import { clearAttempt, loadAttempt } from '../utils/idb';
 import { useBankStore } from './bank';
 
@@ -19,6 +16,7 @@ interface ImportState {
   excelData: ExcelParseResult | null;
   excelQuestions: QuestionItem[];
   unsupportedRows: string[];
+  returnTo: string | null;
 }
 
 export const useImportStore = defineStore('import', {
@@ -33,6 +31,7 @@ export const useImportStore = defineStore('import', {
     excelData: null,
     excelQuestions: [],
     unsupportedRows: [],
+    returnTo: null,
   }),
 
   getters: {
@@ -57,6 +56,7 @@ export const useImportStore = defineStore('import', {
       this.excelData = null;
       this.excelQuestions = [];
       this.unsupportedRows = [];
+      this.returnTo = null;
     },
 
     resetState() {
@@ -79,7 +79,7 @@ export const useImportStore = defineStore('import', {
 
     async confirmImport() {
       const bankStore = useBankStore();
-      if (!this.preview) return;
+      if (!this.preview) return null;
       await bankStore.setBank(this.preview, this.warning ?? undefined);
       if (bankStore.bankId) {
         const saved = await loadAttempt(bankStore.bankId);
@@ -87,7 +87,9 @@ export const useImportStore = defineStore('import', {
           await clearAttempt(bankStore.bankId);
         }
       }
+      const redirect = this.returnTo;
       this.reset();
+      return redirect;
     },
   },
 });

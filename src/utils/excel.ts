@@ -1,12 +1,11 @@
 import * as XLSX from 'xlsx';
-import {
-  type ColumnMapping,
-  type ExcelParseResult,
-  type ExcelSheetData,
-  type OptionItem,
-  type QuestionItem,
-  type QuestionType,
-} from '../types/quiz';
+import type { OptionItem, QuestionType } from '../types/core';
+import type { QuestionItem } from '../types/bank';
+import type {
+  ColumnMapping,
+  ExcelParseResult,
+  ExcelSheetData,
+} from '../types/excel';
 import { normalizeType as normalizeTypeBase } from './bankNormalize';
 
 function normalizeExcelType(raw: unknown): QuestionType | null {
