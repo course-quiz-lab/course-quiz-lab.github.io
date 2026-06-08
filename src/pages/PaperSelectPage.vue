@@ -16,7 +16,12 @@ import { useAttemptStore } from '../stores/attempt';
 import { usePaperStore } from '../stores/paper';
 import type { QuestionType } from '../types/core';
 import type { Paper, PaperAttempt } from '../types/quiz';
-import { deletePaper, listPaperAttempts, listPapers } from '../utils/idb';
+import {
+  deletePaper,
+  deletePaperAttempt,
+  listPaperAttempts,
+  listPapers,
+} from '../utils/idb';
 
 const router = useRouter();
 const attemptStore = useAttemptStore();
@@ -112,6 +117,17 @@ async function removePaper(id: string) {
     }
   }
 }
+
+async function deleteAttempt(attemptId: string) {
+  if (!confirm('确认删除此作答记录？')) return;
+  await deletePaperAttempt(attemptId);
+  // Refresh attempts for current paper
+  if (selectedPaperId.value) {
+    attemptsByPaper.value[selectedPaperId.value] = await listPaperAttempts(
+      selectedPaperId.value,
+    );
+  }
+}
 </script>
 
 <template>
@@ -128,20 +144,21 @@ async function removePaper(id: string) {
           <span class="text-sm font-medium text-muted">
             我的试卷（{{ papers.length }}）
           </span>
-          <button
-            class="inline-flex items-center gap-1 text-sm text-brand border-none bg-transparent cursor-pointer p-1 rounded-lg hover:bg-surface-soft transition-colors duration-150"
+          <AppButton
+            variant="inline"
+            :icon-path="mdiPlus"
+            :icon-size="16"
             @click="goToCreatePaper"
           >
-            <AppIcon :path="mdiPlus" :size="16" />
-            <span>新建试卷</span>
-          </button>
+            新建试卷
+          </AppButton>
         </div>
         <div
           class="flex-1 overflow-y-auto divide-y divide-[color:var(--border)]"
         >
           <div
             v-if="papers.length === 0"
-            class="p-4 text-center text-muted text-sm"
+            class="p-6 text-center text-muted text-sm h-full flex items-center justify-center"
           >
             暂无试卷
           </div>
@@ -177,12 +194,10 @@ async function removePaper(id: string) {
               <div class="text-[22px] max-sm:text-lg mb-1">
                 {{ selectedPaper.title }}
               </div>
-              <span class="text-sm text-muted"
-                >生成于:
-                {{
-                  new Date(selectedPaper.createdAt).toLocaleString('zh-CN')
-                }}</span
-              >
+              <span class="text-sm text-muted">
+                生成于
+                {{ new Date(selectedPaper.createdAt).toLocaleString('zh-CN') }}
+              </span>
             </div>
             <button
               class="text-danger flex items-center p-2 rounded hover:bg-danger/10 transition-colors cursor-pointer border-none bg-transparent"
@@ -195,7 +210,9 @@ async function removePaper(id: string) {
 
           <div class="grid grid-cols-2 gap-4 mb-5 max-sm:grid-cols-1 min-w-0">
             <AppCard class="!p-4 bg-surface-soft">
-              <div class="text-xs text-muted tracking-wide uppercase mb-3">
+              <div
+                class="text-xs text-muted tracking-wide uppercase mb-3 font-bold"
+              >
                 题量统计
               </div>
               <div class="grid gap-2">
@@ -205,41 +222,62 @@ async function removePaper(id: string) {
                   class="flex items-center justify-between text-sm"
                 >
                   <span class="text-muted">{{ typeLabels[type] }}</span>
-                  <span class="font-semibold"
-                    >{{ count
-                    }}<span class="text-xs text-muted font-normal ml-0.5"
-                      >题</span
-                    ></span
-                  >
+                  <span class="font-semibold">
+                    {{ count }}
+                    <span class="text-xs text-muted font-normal ml-0.5">
+                      题
+                    </span>
+                  </span>
                 </div>
                 <div
                   class="border-t border-[color:var(--border)] pt-2 mt-1 flex items-center justify-between text-sm font-medium"
                 >
                   <span>总计</span>
-                  <span class="text-brand"
-                    >{{ selectedPaper.questions.length }} 题</span
-                  >
+                  <span class="text-brand">
+                    {{ selectedPaper.questions.length }} 题
+                  </span>
                 </div>
               </div>
             </AppCard>
 
-            <div class="flex flex-col gap-3 justify-center items-center">
-              <AppButton
-                :icon-path="mdiPlay"
-                :icon-size="18"
-                @click="startNewAttempt('practice')"
+            <AppCard class="!p-4 bg-surface-soft">
+              <div
+                class="text-xs text-muted tracking-wide uppercase mb-3 font-bold"
               >
-                练习模式作答
-              </AppButton>
-              <AppButton
-                :icon-path="mdiPlay"
-                :icon-size="18"
-                variant="secondary"
-                @click="startNewAttempt('exam')"
+                来源题库
+              </div>
+              <div
+                v-if="selectedPaper.bankNames?.length"
+                class="flex flex-wrap gap-1.5"
               >
-                考试模式作答
-              </AppButton>
-            </div>
+                <span
+                  v-for="name in selectedPaper.bankNames"
+                  :key="name"
+                  class="text-xs px-2 py-1 rounded-full bg-surface-chip text-muted"
+                >
+                  {{ name }}
+                </span>
+              </div>
+              <div v-else class="text-xs text-muted">未知来源</div>
+            </AppCard>
+          </div>
+
+          <div class="flex gap-3 justify-center mt-5">
+            <AppButton
+              :icon-path="mdiPlay"
+              :icon-size="18"
+              @click="startNewAttempt('practice')"
+            >
+              练习模式
+            </AppButton>
+            <AppButton
+              :icon-path="mdiPlay"
+              :icon-size="18"
+              variant="secondary"
+              @click="startNewAttempt('exam')"
+            >
+              考试模式
+            </AppButton>
           </div>
         </AppCard>
 
@@ -276,15 +314,13 @@ async function removePaper(id: string) {
                     {{ attempt.submittedAt ? '已完成' : '进行中' }}
                   </span>
                 </span>
-                <span class="text-xs text-muted mt-1"
-                  >开始:
-                  {{
-                    new Date(attempt.startedAt).toLocaleString('zh-CN')
-                  }}</span
-                >
-                <span class="text-xs text-muted"
-                  >模式: {{ attempt.mode === 'exam' ? '考试' : '练习' }}</span
-                >
+                <span class="text-xs text-muted mt-1">
+                  开始于:
+                  {{ new Date(attempt.startedAt).toLocaleString('zh-CN') }}
+                </span>
+                <span class="text-xs text-muted">
+                  模式: {{ attempt.mode === 'exam' ? '考试' : '练习' }}
+                </span>
               </div>
 
               <div class="flex items-center gap-2">
@@ -308,6 +344,13 @@ async function removePaper(id: string) {
                   />
                   错题
                 </AppButton>
+                <button
+                  class="text-danger p-2 rounded hover:bg-danger/10 transition-colors cursor-pointer border-none bg-transparent shrink-0"
+                  :title="'删除此作答记录'"
+                  @click="deleteAttempt(attempt.id)"
+                >
+                  <AppIcon :path="mdiTrashCanOutline" :size="20" />
+                </button>
               </div>
             </div>
           </div>

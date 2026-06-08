@@ -48,6 +48,12 @@ const router = createRouter({
           meta: { title: '云端题库', back: '/import/select' },
         },
         {
+          path: 'wrong',
+          name: 'import-wrong',
+          component: () => import('../pages/import/ImportWrongPage.vue'),
+          meta: { title: '导入错题', back: '/import/select' },
+        },
+        {
           path: 'preview',
           name: 'import-preview',
           component: () => import('../pages/import/ImportPreviewPage.vue'),

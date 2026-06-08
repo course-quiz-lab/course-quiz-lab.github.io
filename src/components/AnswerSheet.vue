@@ -56,7 +56,7 @@ watch(
     <div class="text-sm mb-[12px] text-muted">答题卡</div>
     <div
       ref="gridRef"
-      class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-5 gap-[12px] max-sm:gap-2 max-h-[200px] lg:max-h-[460px] overflow-y-auto overflow-x-hidden"
+      class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-5 gap-[12px] max-sm:gap-2 max-h-[200px] lg:max-h-[460px] overflow-y-auto overflow-x-hidden pr-2"
     >
       <button
         v-for="index in total"

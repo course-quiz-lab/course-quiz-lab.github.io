@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { mdiPlay, mdiPlus } from '@mdi/js';
+import { mdiPlay, mdiPlus, mdiShuffle } from '@mdi/js';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import AppButton from '../components/ui/AppButton.vue';
 import AppCard from '../components/ui/AppCard.vue';
 import AppCheckbox from '../components/ui/AppCheckbox.vue';
-import AppIcon from '../components/ui/AppIcon.vue';
 import PageLayout from '../components/ui/PageLayout.vue';
 import { useAttemptStore } from '../stores/attempt';
 import { useImportStore } from '../stores/import';
@@ -14,6 +13,7 @@ import type { Bank, BankMetaEntry, QuestionItem } from '../types/bank';
 import type { Mode, QuestionType } from '../types/core';
 import type { Paper } from '../types/quiz';
 import { listBankMetas, loadBank, savePaper } from '../utils/idb';
+import moment from 'moment';
 
 const router = useRouter();
 const attemptStore = useAttemptStore();
@@ -21,6 +21,17 @@ const importStore = useImportStore();
 const paperStore = usePaperStore();
 
 function goToImport() {
+  // Save current form state as draft
+  importStore.paperCreateDraft = {
+    selectedBanks: { ...selectedBanks.value },
+    bankWeights: { ...bankWeights.value },
+    loadedBankIds: Object.keys(loadedBanks.value),
+    targetCounts: { ...targetCounts.value },
+    shuffleQuestions: shuffleQuestions.value,
+    shuffleOptions: shuffleOptions.value,
+    selectedMode: selectedMode.value,
+    paperTitle: paperTitle.value,
+  };
   importStore.returnTo = '/papers/create';
   router.push('/import');
 }
@@ -35,7 +46,7 @@ const loadedBanks = ref<Record<string, Bank>>({});
 const shuffleQuestions = ref(false);
 const shuffleOptions = ref(false);
 const selectedMode = ref<Mode>('practice');
-const paperTitle = ref('自定义试卷');
+const paperTitle = ref('自定义试卷 - ' + moment().format('YYYY-MM-DD HH:mm'));
 
 const typeLabels: Record<QuestionType, string> = {
   single: '单项选择题',
@@ -83,9 +94,29 @@ const hasSelection = computed(() => selectedTotal.value > 0);
 onMounted(async () => {
   metas.value = await listBankMetas();
   for (const meta of metas.value) {
-    bankWeights.value[meta.bankId] = 1; // default weight 1
+    bankWeights.value[meta.bankId] = 1;
   }
-  if (metas.value.length === 1) {
+
+  // Restore draft from import store if returning from import flow
+  const draft = importStore.paperCreateDraft;
+  if (draft) {
+    selectedBanks.value = draft.selectedBanks;
+    bankWeights.value = draft.bankWeights;
+    targetCounts.value = draft.targetCounts;
+    shuffleQuestions.value = draft.shuffleQuestions;
+    shuffleOptions.value = draft.shuffleOptions;
+    selectedMode.value = draft.selectedMode;
+    paperTitle.value = draft.paperTitle;
+    // Pre-load banks that were previously loaded
+    await Promise.all(
+      draft.loadedBankIds.map((id) =>
+        loadBank(id).then((b) => {
+          if (b) loadedBanks.value[id] = b;
+        }),
+      ),
+    );
+    importStore.paperCreateDraft = null;
+  } else if (metas.value.length === 1) {
     selectedBanks.value[metas.value[0].bankId] = true;
   }
   isLoading.value = false;
@@ -119,6 +150,47 @@ function updateCount(type: QuestionType, event: Event) {
     0,
     Math.min(Number.isFinite(raw) ? Math.round(raw) : 0, max),
   );
+}
+
+function randomizeDistribution() {
+  const total = maxTotal.value;
+  if (total === 0) return;
+
+  // Random percentage between 70% and 90%
+  const percent = 0.7 + Math.random() * 0.2;
+  const pool = Math.floor(total * percent);
+  if (pool === 0) return;
+
+  const typesWithAvailable = allTypes.filter(
+    (t) => availableCounts.value[t] > 0,
+  );
+  if (typesWithAvailable.length === 0) return;
+
+  // Reset all targets to 0 first
+  for (const t of allTypes) {
+    targetCounts.value[t] = 0;
+  }
+
+  let remaining = pool;
+
+  // Randomly assign each unit from the pool to a type that still has capacity
+  while (remaining > 0) {
+    // Pick a random type among those with remaining capacity
+    const candidates = typesWithAvailable.filter(
+      (t) => targetCounts.value[t] < availableCounts.value[t],
+    );
+    if (candidates.length === 0) break;
+
+    const picked = candidates[Math.floor(Math.random() * candidates.length)];
+    targetCounts.value[picked]++;
+    remaining--;
+  }
+}
+
+function maximizeDistribution() {
+  for (const t of allTypes) {
+    targetCounts.value[t] = availableCounts.value[t];
+  }
 }
 
 function pickRandom<T>(arr: T[], n: number): T[] {
@@ -240,6 +312,9 @@ async function startQuiz() {
     title: paperTitle.value || '自定义试卷',
     createdAt: Date.now(),
     questions: finalQs,
+    bankNames: selectedBankIds
+      .map((id) => metas.value.find((m) => m.bankId === id)?.meta.name)
+      .filter((n): n is string => !!n),
   };
 
   await savePaper(paper);
@@ -282,13 +357,14 @@ async function startQuiz() {
       <AppCard class="max-sm:p-4">
         <div class="flex items-center justify-between mb-4">
           <div class="text-sm font-bold">选择来源题库并分配权重</div>
-          <button
-            class="inline-flex items-center gap-1 text-sm text-brand border-none bg-transparent cursor-pointer p-1 rounded-lg hover:bg-surface-soft transition-colors duration-150"
+          <AppButton
+            variant="inline"
+            :icon-path="mdiPlus"
+            :icon-size="16"
             @click="goToImport"
           >
-            <AppIcon :path="mdiPlus" :size="16" />
-            <span>导入题库</span>
-          </button>
+            导入题库
+          </AppButton>
         </div>
         <div class="grid gap-4">
           <div
@@ -306,7 +382,9 @@ async function startQuiz() {
               v-if="selectedBanks[meta.bankId]"
               class="flex flex-row items-center gap-2 max-sm:pl-6 text-sm"
             >
-              <label class="text-muted text-xs shrink-0">抽取权重系数</label>
+              <label class="text-muted text-xs shrink-0 select-none">
+                抽取权重系数
+              </label>
               <input
                 v-model.number="bankWeights[meta.bankId]"
                 type="number"
@@ -326,7 +404,27 @@ async function startQuiz() {
             !Object.values(selectedBanks).some(Boolean),
         }"
       >
-        <div class="text-sm font-bold mb-4">题目与题型分配</div>
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-sm font-bold">题目与题型分配</div>
+          <div class="flex items-center gap-1">
+          <AppButton
+            variant="inline"
+            :icon-path="mdiShuffle"
+            :icon-size="16"
+            @click="randomizeDistribution"
+          >
+            随机分配
+          </AppButton>
+          <AppButton
+            variant="inline"
+            :icon-path="mdiPlus"
+            :icon-size="16"
+            @click="maximizeDistribution"
+          >
+            全选
+          </AppButton>
+          </div>
+        </div>
         <div class="grid gap-3">
           <div
             v-for="type in allTypes"
@@ -334,13 +432,13 @@ async function startQuiz() {
             class="flex items-center justify-between gap-3"
             :class="{ 'opacity-30': availableCounts[type] === 0 }"
           >
-            <span class="text-sm text-muted shrink-0">{{
-              typeLabels[type]
-            }}</span>
+            <span class="text-sm text-muted shrink-0">
+              {{ typeLabels[type] }}
+            </span>
             <div class="flex items-center gap-2">
-              <span class="text-xs text-muted"
-                >共 {{ availableCounts[type] }} 题</span
-              >
+              <span class="text-xs text-muted">
+                共 {{ availableCounts[type] }} 题
+              </span>
               <input
                 type="number"
                 min="0"

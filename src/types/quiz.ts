@@ -33,6 +33,8 @@ export interface Paper {
   title: string;
   createdAt: number;
   questions: QuestionItem[];
+  /** Names of source banks this paper draws questions from */
+  bankNames?: string[];
 }
 
 export interface PaperAttempt {

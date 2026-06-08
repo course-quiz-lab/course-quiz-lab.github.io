@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import { computed, ref, watch, nextTick } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useAttemptStore } from '../stores/attempt';
 import { usePaperStore } from '../stores/paper';
-import { evaluateStatus } from '../utils/scoring';
 import { isMultiSelectType } from '../types/core';
-import type { QuestionItem } from '../types/bank';
-import AppButton from './ui/AppButton.vue';
+import { evaluateStatus } from '../utils/scoring';
 import QuestionCard from './QuestionCard.vue';
 import QuestionOptions from './QuestionOptions.vue';
 import QuizLayout from './QuizLayout.vue';
+import AppButton from './ui/AppButton.vue';
 
 const paperStore = usePaperStore();
 const attemptStore = useAttemptStore();
@@ -66,22 +65,21 @@ const answerText = computed(() => {
 });
 
 function answerStatusForQuestion(questionId: string) {
-  const base = questions.value.find((q) => q.id === questionId);
-  if (!base) return 'unanswered';
-  const resolved = attempt.value?.shuffledQuestions?.[questionId] ?? base;
+  const q = questions.value.find((q) => q.id === questionId);
+  if (!q) return 'unanswered';
   const entry = attempt.value?.answers[questionId];
   if (!entry) return 'unanswered';
   if (attempt.value?.mode === 'exam' && !attempt.value?.submittedAt) {
     return 'unanswered';
   }
   if (
-    isMultiSelectType(resolved.type) &&
+    isMultiSelectType(q.type) &&
     attempt.value?.mode === 'practice' &&
     !entry.submitted
   ) {
     return 'unanswered';
   }
-  return evaluateStatus(resolved, entry.selected);
+  return evaluateStatus(q, entry.selected);
 }
 
 const allStatuses = computed(() =>

@@ -1,7 +1,18 @@
 import { defineStore } from 'pinia';
-import type { ImportMethod } from '../types/core';
+import type { ImportMethod, Mode, QuestionType } from '../types/core';
 import type { Bank, QuestionItem } from '../types/bank';
 import type { ExcelParseResult } from '../types/excel';
+
+interface PaperCreateDraft {
+  selectedBanks: Record<string, boolean>;
+  bankWeights: Record<string, number>;
+  loadedBankIds: string[];
+  targetCounts: Record<QuestionType, number>;
+  shuffleQuestions: boolean;
+  shuffleOptions: boolean;
+  selectedMode: Mode;
+  paperTitle: string;
+}
 import { clearAttempt, loadAttempt } from '../utils/idb';
 import { useBankStore } from './bank';
 
@@ -17,6 +28,7 @@ interface ImportState {
   excelQuestions: QuestionItem[];
   unsupportedRows: string[];
   returnTo: string | null;
+  paperCreateDraft: PaperCreateDraft | null;
 }
 
 export const useImportStore = defineStore('import', {
@@ -32,6 +44,7 @@ export const useImportStore = defineStore('import', {
     excelQuestions: [],
     unsupportedRows: [],
     returnTo: null,
+    paperCreateDraft: null,
   }),
 
   getters: {
@@ -56,7 +69,6 @@ export const useImportStore = defineStore('import', {
       this.excelData = null;
       this.excelQuestions = [];
       this.unsupportedRows = [];
-      this.returnTo = null;
     },
 
     resetState() {

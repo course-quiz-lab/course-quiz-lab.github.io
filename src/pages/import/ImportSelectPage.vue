@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  mdiBookOpenOutline,
   mdiCloudOutline,
   mdiFileDocumentOutline,
   mdiLinkVariant,
@@ -43,6 +44,13 @@ const methods: MethodItem[] = [
     description: '通过可公开访问的链接导入 JSON 题库',
   },
   {
+    id: 'wrongbook',
+    label: '导入错题',
+    icon: mdiBookOpenOutline,
+    disabled: false,
+    description: '将错题本中的题目导入为新的题库',
+  },
+  {
     id: 'xlsx',
     label: '导入 XLSX',
     icon: mdiMicrosoftExcel,
@@ -70,6 +78,7 @@ function handleSelect(method: ImportMethod) {
     link: '/import/fetch',
     xlsx: '/import/table',
     cloud: '/import/cloud',
+    wrongbook: '/import/wrong',
     word: null,
   };
 
