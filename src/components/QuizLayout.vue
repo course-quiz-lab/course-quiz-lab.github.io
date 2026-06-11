@@ -1,34 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import AnswerSheet from './AnswerSheet.vue';
 
-const props = defineProps<{
+defineProps<{
   total: number;
   statuses: string[];
   currentIndex?: number;
   currentPage?: number;
   pageSize?: number;
+  shouldShowCurrent?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: 'select', index: number): void;
 }>();
-
-const visibleStart = computed(() => {
-  if (props.currentPage != null && props.pageSize) {
-    return (props.currentPage - 1) * props.pageSize;
-  }
-  // Single-question mode: scroll to the current question
-  return props.currentIndex ?? 0;
-});
-
-const visibleEnd = computed(() => {
-  if (props.currentPage != null && props.pageSize) {
-    return Math.min(props.currentPage * props.pageSize, props.total) - 1;
-  }
-  // Single-question mode: show a small window around current question
-  return Math.min((props.currentIndex ?? 0) + 2, props.total - 1);
-});
 </script>
 
 <template>
@@ -43,8 +27,7 @@ const visibleEnd = computed(() => {
       :total="total"
       :statuses="statuses"
       :current-index="currentIndex"
-      :visible-start="visibleStart"
-      :visible-end="visibleEnd"
+      :should-show-current="shouldShowCurrent"
       @select="emit('select', $event)"
     />
   </div>

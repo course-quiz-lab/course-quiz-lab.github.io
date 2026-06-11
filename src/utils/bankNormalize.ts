@@ -7,7 +7,6 @@
  */
 
 import type { OptionItem, QuestionType } from '../types/core';
-import type { QuestionItem } from '../types/bank';
 import { asLabel, asNumericLabel, labelAt, toIndex } from './bankLabel';
 
 // ── Constants ───────────────────────────────────────────

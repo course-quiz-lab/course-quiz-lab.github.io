@@ -1,31 +1,41 @@
 <script setup lang="ts">
-import { mdiGithub, mdiRefresh, mdiMagnify, mdiSortVariant } from '@mdi/js';
+import {
+  mdiCheck,
+  mdiDownload,
+  mdiGithub,
+  mdiMagnify,
+  mdiRefresh,
+  mdiSortVariant,
+} from '@mdi/js';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import AppButton from '../../components/ui/AppButton.vue';
 import AppCard from '../../components/ui/AppCard.vue';
 import AppIcon from '../../components/ui/AppIcon.vue';
 import Pagination from '../../components/ui/Pagination.vue';
-import { useBankStore } from '../../stores/bank';
 import { useImportStore } from '../../stores/import';
 import type { CloudBankEntry, CloudBankIndex } from '../../types/quiz';
-import { clearAttempt, loadAttempt } from '../../utils/idb';
-import { validateBankSchema } from '../../utils/validation';
+import { listBankMetas, loadBank } from '../../utils/idb';
 
 const CLOUD_INDEX_URL = 'https://course-quiz-lab.github.io/store/index.json';
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 
 type SortKey = 'name' | 'course' | 'total';
 
 const router = useRouter();
-const bankStore = useBankStore();
 const importStore = useImportStore();
 
 const banks = ref<CloudBankEntry[]>([]);
 const isLoading = ref(true);
 const error = ref<string | null>(null);
-const downloadingUrl = ref<string | null>(null);
 const updatedAt = ref<string | null>(null);
+
+// Selection for batch download
+const selected = ref<Set<string>>(new Set());
+
+// Filter: only show unimported banks
+const showUnimportedOnly = ref(false);
+const importedUrls = ref<Set<string>>(new Set());
 
 // Search & sort
 const searchQuery = ref('');
@@ -37,6 +47,12 @@ const currentPage = ref(1);
 
 onMounted(async () => {
   await fetchCloudIndex();
+  // Load imported sourceUrls for filtering
+  const metas = await listBankMetas();
+  for (const m of metas) {
+    const bank = await loadBank(m.bankId);
+    if (bank?.meta.sourceUrl) importedUrls.value.add(bank.meta.sourceUrl);
+  }
 });
 
 // Reset to page 1 when search or sort changes
@@ -83,6 +99,10 @@ const filteredAndSorted = computed(() => {
     );
   }
 
+  if (showUnimportedOnly.value) {
+    result = result.filter((b) => !importedUrls.value.has(b.url));
+  }
+
   const sorted = [...result];
   const key = sortKey.value;
   sorted.sort((a, b) => {
@@ -122,35 +142,40 @@ function openGithub(url: string) {
   window.open(url, '_blank');
 }
 
-async function downloadBank(entry: CloudBankEntry) {
-  if (!entry) return;
-  downloadingUrl.value = entry.url;
-  try {
-    const res = await fetch(entry.url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const raw = await res.json();
-    const result = validateBankSchema(raw);
-    if (result.errors.length > 0) {
-      alert('下载失败：' + result.errors.join('\n'));
-      return;
-    }
-    if (!result.bank) return;
-    result.bank.meta.importMethod = 'cloud';
-    await bankStore.setBank(result.bank);
-    if (bankStore.bankId) {
-      const saved = await loadAttempt(bankStore.bankId);
-      if (saved) {
-        await clearAttempt(bankStore.bankId);
-      }
-    }
-    const redirect = importStore.returnTo;
-    importStore.returnTo = null;
-    router.push(redirect ?? '/papers');
-  } catch {
-    alert('下载失败，请检查网络连接后重试。');
-  } finally {
-    downloadingUrl.value = null;
-  }
+function toggleSelect(entry: CloudBankEntry) {
+  const next = new Set(selected.value);
+  if (next.has(entry.url)) next.delete(entry.url);
+  else next.add(entry.url);
+  selected.value = next;
+}
+
+function selectAllVisible() {
+  selected.value = new Set(paginatedBanks.value.map((e) => e.url));
+}
+
+function clearSelection() {
+  selected.value = new Set();
+}
+
+function startDownload(entries: CloudBankEntry[]) {
+  importStore.downloadQueue = entries.map((entry) => ({
+    entry,
+    status: 'pending' as const,
+  }));
+  router.push('/import/cloud-progress');
+}
+
+async function downloadSelected() {
+  if (selected.value.size === 0) return;
+  if (
+    selected.value.size >= 2 &&
+    !confirm(`确认下载选中的 ${selected.value.size} 个题库？`)
+  )
+    return;
+
+  const entries = banks.value.filter((e) => selected.value.has(e.url));
+  selected.value = new Set();
+  startDownload(entries);
 }
 </script>
 
@@ -201,6 +226,18 @@ async function downloadBank(entry: CloudBankEntry) {
             />
           </div>
 
+          <!-- Filter: unimported only -->
+          <label
+            class="flex items-center gap-1.5 text-xs text-muted cursor-pointer select-none shrink-0"
+          >
+            <input
+              v-model="showUnimportedOnly"
+              type="checkbox"
+              class="accent-brand"
+            />
+            仅显示未导入
+          </label>
+
           <!-- Sort buttons -->
           <div class="flex items-center gap-1">
             <span class="text-xs text-muted mr-1 flex items-center gap-0.5">
@@ -239,6 +276,34 @@ async function downloadBank(entry: CloudBankEntry) {
           </button>
         </div>
 
+        <!-- Batch actions -->
+        <div class="flex flex-wrap items-center gap-2 mb-3">
+          <AppButton
+            variant="inline"
+            :icon-path="mdiCheck"
+            :icon-size="14"
+            @click="selectAllVisible"
+          >
+            全选本页
+          </AppButton>
+          <AppButton
+            v-if="selected.size > 0"
+            variant="inline"
+            :icon-path="mdiDownload"
+            :icon-size="14"
+            @click="downloadSelected"
+          >
+            下载选中（{{ selected.size }}）
+          </AppButton>
+          <button
+            v-if="selected.size > 0"
+            class="text-xs text-muted hover:text-danger border-none bg-transparent cursor-pointer transition-colors"
+            @click="clearSelection"
+          >
+            取消选择
+          </button>
+        </div>
+
         <!-- Summary -->
         <p class="text-xs text-muted mb-3">
           共 {{ filteredAndSorted.length }} 个云端题库
@@ -253,12 +318,15 @@ async function downloadBank(entry: CloudBankEntry) {
           <div
             v-for="entry in paginatedBanks"
             :key="entry.url"
-            class="min-w-0 flex items-center gap-2.5 p-2.5 rounded-xl border border-[color:var(--border)] bg-surface-soft cursor-pointer transition-all duration-150 hover:border-brand select-none"
+            class="min-w-0 flex items-start gap-2.5 p-2.5 rounded-xl border border-[color:var(--border)] bg-surface-soft transition-all duration-150 select-none cursor-pointer"
             :class="{
-              'pointer-events-none opacity-60': downloadingUrl === entry.url,
+              'border-brand': selected.has(entry.url),
             }"
-            @click="downloadBank(entry)"
+            @click="toggleSelect(entry)"
           >
+            <!-- Selected badge -->
+
+            <!-- Card body -->
             <span class="flex-1 min-w-0">
               <span class="font-medium text-sm">
                 {{ entry.metadata.name }}
@@ -290,17 +358,17 @@ async function downloadBank(entry: CloudBankEntry) {
           @update:current="currentPage = $event"
         />
 
-        <!-- Updated time -->
-        <div v-if="updatedAt" class="text-xs text-muted/40 text-center mt-6">
-          索引最后构建于 {{ new Date(updatedAt).toLocaleString('zh-CN') }}
-        </div>
-
         <!-- Empty -->
         <div
           v-if="paginatedBanks.length === 0"
           class="py-12 text-center text-sm text-muted"
         >
           没有匹配的题库
+        </div>
+
+        <!-- Updated time -->
+        <div v-if="updatedAt" class="text-xs text-muted/40 text-center mt-6">
+          索引最后构建于 {{ new Date(updatedAt).toLocaleString('zh-CN') }}
         </div>
       </template>
     </AppCard>

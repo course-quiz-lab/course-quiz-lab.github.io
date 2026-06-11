@@ -23,8 +23,8 @@ const attempt = computed(() => attemptStore.attempt);
 const questions = computed(() => paper.value?.questions || []);
 
 onMounted(async () => {
-  const paperId = route.query.paperId as string;
-  const attemptId = route.query.attemptId as string;
+  const paperId = route.params.paperId as string;
+  const attemptId = route.params.attemptId as string;
   if (!paperId || !attemptId) {
     router.replace('/papers');
     return;
@@ -53,7 +53,9 @@ const statuses = computed(() => Object.values(statusMap.value));
 const correctCount = computed(
   () => statuses.value.filter((status) => status === 'correct').length,
 );
-const total = computed(() => questions.value.length);
+const total = computed(
+  () => statuses.value.filter((status) => status != 'unanswered').length,
+);
 const percent = computed(() =>
   total.value ? Math.round((correctCount.value / total.value) * 100) : 0,
 );
@@ -126,15 +128,16 @@ function answerLabel(question: QuestionItem) {
           </div>
         </div>
       </div>
-      <div class="flex flex-wrap gap-[12px]">
+      <div class="flex flex-wrap gap-[12px] mt-3">
+        <AppButton variant="secondary" @click="router.push('/papers')">
+          返回试卷列表
+        </AppButton>
         <AppButton
           v-if="!attempt.submittedAt"
-          variant="secondary"
           @click="router.push(`/quiz/${paper.id}/attempt/${attempt.id}`)"
         >
           继续作答
         </AppButton>
-        <AppButton @click="router.push('/papers')">返回试卷列表</AppButton>
       </div>
     </section>
 
@@ -144,14 +147,14 @@ function answerLabel(question: QuestionItem) {
     >
       <div class="text-sm text-muted tracking-wide uppercase mb-3">
         错题与部分正确
-        <span v-if="incorrectList.length > 0" class="ml-1 font-normal"
-          >（{{ incorrectList.length }} 题）</span
-        >
+        <span v-if="incorrectList.length > 0" class="ml-1 font-normal">
+          （{{ incorrectList.length }} 题）
+        </span>
       </div>
       <div v-if="incorrectList.length === 0" class="text-muted text-sm">
         目前没有错题。
       </div>
-      <ul v-else class="list-none m-0 p-0 grid gap-[12px]">
+      <ul v-else class="list-none m-0 p-0 grid gap-6">
         <li
           v-for="question in pagedIncorrect"
           :key="question.id"
@@ -162,8 +165,9 @@ function answerLabel(question: QuestionItem) {
             <StatusPill :status="statusMap[question.id]" />
             <span
               class="bg-surface-chip rounded-full px-2.5 py-1 text-xs text-muted"
-              >题型：{{ typeLabel(question.type) }}</span
             >
+              题型：{{ typeLabel(question.type) }}
+            </span>
             <span
               class="bg-surface-chip rounded-full px-2.5 py-1 text-xs text-muted"
             >

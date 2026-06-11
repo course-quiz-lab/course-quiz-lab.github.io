@@ -54,6 +54,12 @@ const router = createRouter({
           meta: { title: '导入错题', back: '/import/select' },
         },
         {
+          path: 'cloud-progress',
+          name: 'import-cloud-progress',
+          component: () => import('../pages/import/ImportCloudProgressPage.vue'),
+          meta: { title: '下载进度', back: '/import/cloud' },
+        },
+        {
           path: 'preview',
           name: 'import-preview',
           component: () => import('../pages/import/ImportPreviewPage.vue'),
@@ -86,13 +92,13 @@ const router = createRouter({
       meta: { title: '答题模式' },
     },
     {
-      path: '/review',
+      path: '/review/:paperId/attempt/:attemptId',
       name: 'review',
       component: () => import('../pages/ReviewPage.vue'),
       meta: { title: '结果回顾' },
     },
     {
-      path: '/wrong-review',
+      path: '/wrong-review/:paperId/attempt/:attemptId',
       name: 'wrong-review',
       component: () => import('../pages/WrongReviewPage.vue'),
       meta: { title: '错题回顾' },

@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
-import type { OptionItem, QuestionType } from '../types/core';
 import type { QuestionItem } from '../types/bank';
+import type { OptionItem, QuestionType } from '../types/core';
 import type {
   ColumnMapping,
   ExcelParseResult,

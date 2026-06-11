@@ -93,7 +93,7 @@ async function submitExam() {
   }
   await attemptStore.submitExam();
   await router.push(
-    `/review?paperId=${paper.value?.id}&attemptId=${attempt.value?.id}`,
+    `/review/${paper.value?.id}/attempt/${attempt.value?.id}`,
   );
 }
 
@@ -151,7 +151,7 @@ function toggleView() {
           v-if="!isExam"
           variant="ghost"
           @click="
-            router.push(`/review?paperId=${paper.id}&attemptId=${attempt.id}`)
+            router.push(`/review/${paper.id}/attempt/${attempt.id}`)
           "
           :icon-path="mdiClipboardTextOutline"
         >

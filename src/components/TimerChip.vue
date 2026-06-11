@@ -36,6 +36,7 @@ const formatted = computed(() => {
 <template>
   <span
     class="px-3.5 py-2 rounded-full bg-surface-soft border border-[rgba(43,34,24,0.12)] text-sm"
-    >已用时 {{ formatted }}</span
   >
+    已用时 {{ formatted }}
+  </span>
 </template>

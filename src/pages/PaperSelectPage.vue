@@ -95,7 +95,7 @@ async function startNewAttempt(mode: 'practice' | 'exam') {
 async function resumeOrReviewAttempt(attempt: PaperAttempt) {
   if (attempt.submittedAt) {
     // Review
-    router.push(`/review?paperId=${attempt.paperId}&attemptId=${attempt.id}`);
+    router.push(`/review/${attempt.paperId}/attempt/${attempt.id}`);
   } else {
     // Resume
     router.push(`/quiz/${attempt.paperId}/attempt/${attempt.id}`);
@@ -104,7 +104,7 @@ async function resumeOrReviewAttempt(attempt: PaperAttempt) {
 
 function viewWrongQuestions(attempt: PaperAttempt) {
   router.push(
-    `/wrong-review?paperId=${attempt.paperId}&attemptId=${attempt.id}`,
+    `/wrong-review/${attempt.paperId}/attempt/${attempt.id}`,
   );
 }
 

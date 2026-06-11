@@ -1,7 +1,17 @@
 import { defineStore } from 'pinia';
+import type { Bank, CloudBankEntry, QuestionItem } from '../types/bank';
 import type { ImportMethod, Mode, QuestionType } from '../types/core';
-import type { Bank, QuestionItem } from '../types/bank';
 import type { ExcelParseResult } from '../types/excel';
+import { clearAttempt, loadAttempt } from '../utils/idb';
+import { useBankStore } from './bank';
+
+export type DownloadStatus = 'pending' | 'downloading' | 'success' | 'fail' | 'cancelled';
+
+export interface DownloadQueueItem {
+  entry: CloudBankEntry;
+  status: DownloadStatus;
+  error?: string;
+}
 
 interface PaperCreateDraft {
   selectedBanks: Record<string, boolean>;
@@ -13,8 +23,6 @@ interface PaperCreateDraft {
   selectedMode: Mode;
   paperTitle: string;
 }
-import { clearAttempt, loadAttempt } from '../utils/idb';
-import { useBankStore } from './bank';
 
 interface ImportState {
   selectedMethod: ImportMethod;
@@ -29,6 +37,7 @@ interface ImportState {
   unsupportedRows: string[];
   returnTo: string | null;
   paperCreateDraft: PaperCreateDraft | null;
+  downloadQueue: DownloadQueueItem[];
 }
 
 export const useImportStore = defineStore('import', {
@@ -45,6 +54,7 @@ export const useImportStore = defineStore('import', {
     unsupportedRows: [],
     returnTo: null,
     paperCreateDraft: null,
+    downloadQueue: [],
   }),
 
   getters: {
@@ -69,6 +79,10 @@ export const useImportStore = defineStore('import', {
       this.excelData = null;
       this.excelQuestions = [];
       this.unsupportedRows = [];
+    },
+
+    resetDownloadQueue() {
+      this.downloadQueue = [];
     },
 
     resetState() {

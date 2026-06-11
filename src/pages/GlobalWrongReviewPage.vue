@@ -2,18 +2,16 @@
 import { mdiMagnify, mdiPencilOutline } from '@mdi/js';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import StatusPill from '../components/StatusPill.vue';
+import WrongQuestionCard from '../components/WrongQuestionCard.vue';
 import AppButton from '../components/ui/AppButton.vue';
-import AppCard from '../components/ui/AppCard.vue';
 import AppIcon from '../components/ui/AppIcon.vue';
 import PageLayout from '../components/ui/PageLayout.vue';
 import Pagination from '../components/ui/Pagination.vue';
 import type { QuestionItem } from '../types/bank';
-import type { QuestionType } from '../types/core';
 import type { Paper, PaperAttempt } from '../types/quiz';
+import { questionKey } from '../utils/dedup';
 import { listPaperAttempts, listPapers } from '../utils/idb';
 import { evaluateStatus } from '../utils/scoring';
-import { questionKey } from '../utils/dedup';
 
 const PAGE_SIZE = 15;
 
@@ -107,33 +105,7 @@ const pagedItems = computed(() => {
   return filteredItems.value.slice(start, start + PAGE_SIZE);
 });
 
-function typeLabel(type: QuestionType) {
-  const map: Record<QuestionType, string> = {
-    single: '单选',
-    multiple: '多选',
-    indeterminate: '不定项',
-    judge: '判断',
-  };
-  return map[type] || '未知';
-}
 
-function formatAnswer(question: QuestionItem) {
-  if (question.type === 'judge') {
-    return question.answer
-      .map((id) => (id === 'T' ? '正确' : '错误'))
-      .join(' / ');
-  }
-  return question.answer.join(' / ');
-}
-
-function userSelectedFormat(question: QuestionItem, attempt: PaperAttempt) {
-  const selected = attempt.answers[question.id]?.selected ?? [];
-  if (selected.length === 0) return '未作答';
-  if (question.type === 'judge') {
-    return selected.map((id) => (id === 'T' ? '正确' : '错误')).join(' / ');
-  }
-  return selected.join(' / ');
-}
 
 function goToPaper() {
   router.push('/papers');
@@ -141,7 +113,7 @@ function goToPaper() {
 </script>
 
 <template>
-  <PageLayout title="错题本">
+  <PageLayout title="错题本" max-width="800px">
     <div v-if="isLoading" class="text-muted text-sm pb-[100px]">加载中…</div>
 
     <div
@@ -166,7 +138,7 @@ function goToPaper() {
       >
         <div class="flex gap-6 max-sm:gap-4">
           <div class="flex flex-col">
-              <span class="text-muted text-xs mb-1">去重错题</span>
+              <span class="text-muted text-xs mb-1">错题数</span>
             <span class="font-medium text-danger text-lg"
               >{{ wrongItems.length }} 题</span
             >
@@ -202,82 +174,19 @@ function goToPaper() {
 
       <template v-else>
         <div class="grid gap-4 mb-6">
-          <AppCard
+          <WrongQuestionCard
             v-for="item in pagedItems"
             :key="
               item.paper.id + '-' + item.question.id + '-' + item.attempt.id
             "
-          >
-            <div class="flex items-center gap-2 text-[11px] text-muted mb-3">
-              <span
-                class="px-2 py-0.5 rounded border border-[color:var(--border)] bg-surface-soft"
-              >
-                {{ item.paper.title }}
-              </span>
-              <span
-                v-if="item.wrongCount > 1"
-                class="px-2 py-0.5 rounded-full bg-danger/10 text-danger text-[10px] font-medium"
-              >
-                错 {{ item.wrongCount }} 次
-              </span>
-              <span>·</span>
-              <span>{{
-                new Date(item.attempt.startedAt).toLocaleDateString('zh-CN')
-              }}</span>
-              <span>·</span>
-              <span>{{ item.attempt.mode === 'exam' ? '考试' : '练习' }}</span>
-            </div>
-
-            <div class="mb-3 text-base font-medium">
-              {{ item.question.stem }}
-            </div>
-
-            <div
-              v-if="item.question.options.length > 0"
-              class="mb-3 pl-4 border-l-2 border-[color:var(--border)]"
-            >
-              <div
-                v-for="opt in item.question.options"
-                :key="opt.id"
-                class="text-sm py-1 px-2 -mx-2 rounded"
-                :class="
-                  item.question.answer.includes(opt.id)
-                    ? 'bg-[rgba(47,133,90,0.1)]'
-                    : ''
-                "
-              >
-                <span class="font-medium mr-2">{{ opt.id }}.</span>
-                <span class="text-muted text-foreground">{{ opt.text }}</span>
-              </div>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-2">
-              <StatusPill :status="item.status as any" />
-              <span
-                class="bg-surface-chip rounded-full px-2.5 py-1 text-xs text-muted"
-              >
-                {{ typeLabel(item.question.type) }}
-              </span>
-              <span
-                class="bg-surface-chip rounded-full px-2.5 py-1 text-xs text-muted"
-              >
-                您的作答：{{ userSelectedFormat(item.question, item.attempt) }}
-              </span>
-              <span
-                class="bg-[rgba(47,133,90,0.14)] text-ok rounded-full px-2.5 py-1 text-xs border border-brand/20 bg-brand/5 text-brand"
-              >
-                参考答案：{{ formatAnswer(item.question) }}
-              </span>
-            </div>
-
-            <div
-              v-if="item.question.analysis"
-              class="mt-3 pt-3 border-t border-[color:var(--border)] text-sm text-muted"
-            >
-              <span class="font-medium text-foreground block mb-1">解析：</span>
-              {{ item.question.analysis }}
-            </div>
-          </AppCard>
+            :question="item.question"
+            :status="item.status"
+            :paper-title="item.paper.title"
+            :attempt-date="item.attempt.startedAt"
+            :attempt-mode="item.attempt.mode"
+            :wrong-count="item.wrongCount"
+            :selected-answer="item.attempt.answers[item.question.id]?.selected ?? []"
+          />
         </div>
 
         <Pagination

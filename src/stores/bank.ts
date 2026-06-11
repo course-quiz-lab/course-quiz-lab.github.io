@@ -34,6 +34,7 @@ export const useBankStore = defineStore('bank', {
       }
       this.ready = true;
     },
+
     async setBank(bank: Bank, warning?: string) {
       const bankId = buildBankId(bank);
       this.bank = bank;
@@ -41,6 +42,7 @@ export const useBankStore = defineStore('bank', {
       this.warning = warning ?? null;
       await saveBank(bankId, bank);
     },
+
     async resetBank() {
       if (this.bankId) {
         await clearBank(this.bankId);
@@ -49,6 +51,7 @@ export const useBankStore = defineStore('bank', {
       this.bankId = null;
       this.warning = null;
     },
+
     setWarning(warning?: string) {
       this.warning = warning ?? null;
     },

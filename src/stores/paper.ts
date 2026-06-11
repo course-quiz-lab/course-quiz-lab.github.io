@@ -12,9 +12,11 @@ export const usePaperStore = defineStore('paper', {
     paper: null,
     loading: false,
   }),
+
   getters: {
     hasPaper: (state) => !!state.paper,
   },
+
   actions: {
     async loadPaper(paperId: string) {
       this.loading = true;
@@ -30,6 +32,7 @@ export const usePaperStore = defineStore('paper', {
         this.loading = false;
       }
     },
+
     clearPaper() {
       this.paper = null;
     },

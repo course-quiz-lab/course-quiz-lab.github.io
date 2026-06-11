@@ -155,8 +155,10 @@ function scrollToQuestion(index: number) {
     v-if="paper && attempt"
     :total="total"
     :statuses="allStatuses"
+    :current-index="(currentPage - 1) * PAGE_SIZE"
     :current-page="currentPage"
     :page-size="PAGE_SIZE"
+    :should-show-current="false"
     @select="scrollToQuestion"
   >
     <!-- Page info -->

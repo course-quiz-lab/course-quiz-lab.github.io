@@ -8,7 +8,7 @@ const route = useRoute();
 const currentStep = computed<1 | 2 | 3>(() => {
   const name = route.name as string;
   if (name === 'import-select') return 1;
-  if (name === 'import-preview') return 3;
+  if (name === 'import-preview' || name === 'import-cloud-progress') return 3;
   return 2;
 });
 </script>

@@ -126,46 +126,48 @@ async function handleExport(entry: BankMetaEntry) {
       <div class="text-sm text-muted mb-1">
         共 {{ bankMetas.length }} 个题库
       </div>
-      <AppCard
-        v-for="entry in bankMetas"
-        :key="entry.bankId"
-        class="!p-5 flex items-center justify-between gap-4 max-sm:flex-col max-sm:items-start"
-      >
-        <div class="min-w-0 flex-1">
-          <div class="font-medium text-base">
-            {{ entry.meta.name }}
+      <div class="grid grid-cols-2 gap-4 max-lg:grid-cols-1">
+        <AppCard
+          v-for="entry in bankMetas"
+          :key="entry.bankId"
+          class="!p-5 flex items-center justify-between gap-4 max-sm:flex-col max-sm:items-start"
+        >
+          <div class="min-w-0 flex-1">
+            <div class="font-medium text-base">
+              {{ entry.meta.name }}
+            </div>
+            <div class="block text-sm text-muted mt-0.5">
+              {{ entry.meta.course }}
+            </div>
+            <div class="block text-[13px] text-muted/70 mt-0.5">
+              {{ entry.meta.total ?? '?' }} 题 ·
+              {{ entry.meta.author || '未知作者' }} ·
+              {{ new Date(entry.importedAt).toLocaleString('zh-CN') }}
+            </div>
           </div>
-          <div class="block text-sm text-muted mt-0.5">
-            {{ entry.meta.course }}
+          <div class="flex items-center gap-2 shrink-0">
+            <AppButton
+              variant="ghost"
+              :icon-path="mdiFileDownloadOutline"
+              :icon-size="16"
+              :disabled="exportingId === entry.bankId"
+              @click="handleExport(entry)"
+            >
+              {{ exportingId === entry.bankId ? '导出中…' : '导出' }}
+            </AppButton>
+            <AppButton
+              variant="ghost"
+              :icon-path="mdiDeleteOutline"
+              :icon-size="16"
+              class="!text-danger"
+              :disabled="deletingId === entry.bankId"
+              @click="handleDelete(entry)"
+            >
+              {{ deletingId === entry.bankId ? '删除中…' : '删除' }}
+            </AppButton>
           </div>
-          <div class="block text-[13px] text-muted/70 mt-0.5">
-            {{ entry.meta.total ?? '?' }} 题 ·
-            {{ entry.meta.author || '未知作者' }} ·
-            {{ new Date(entry.importedAt).toLocaleString('zh-CN') }}
-          </div>
-        </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <AppButton
-            variant="ghost"
-            :icon-path="mdiFileDownloadOutline"
-            :icon-size="16"
-            :disabled="exportingId === entry.bankId"
-            @click="handleExport(entry)"
-          >
-            {{ exportingId === entry.bankId ? '导出中…' : '导出' }}
-          </AppButton>
-          <AppButton
-            variant="ghost"
-            :icon-path="mdiDeleteOutline"
-            :icon-size="16"
-            class="!text-danger"
-            :disabled="deletingId === entry.bankId"
-            @click="handleDelete(entry)"
-          >
-            {{ deletingId === entry.bankId ? '删除中…' : '删除' }}
-          </AppButton>
-        </div>
-      </AppCard>
+        </AppCard>
+      </div>
     </div>
   </PageLayout>
 </template>

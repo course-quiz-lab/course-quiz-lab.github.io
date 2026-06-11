@@ -34,11 +34,12 @@ function updateSelection(option: OptionItem, checked: boolean) {
     <label
       v-for="option in question.options"
       :key="option.id"
-      class="grid grid-cols-[28px_1fr] gap-[12px] items-center p-[12px] p-4 rounded-xl border border-transparent bg-surface-option cursor-pointer transition-all duration-200 text-base max-sm:text-sm"
+      class="grid grid-cols-[28px_1fr] gap-[12px] items-center p-[12px] p-4 rounded-xl border border-transparent bg-surface-option transition-all duration-200 text-base max-sm:text-sm"
       :class="{
         '!border-[rgba(47,111,107,0.5)] !bg-[rgba(47,111,107,0.08)]':
           modelValue.includes(option.id),
-        'opacity-60 cursor-not-allowed': disabled,
+        'opacity-60': disabled,
+        'cursor-pointer': !disabled,
       }"
     >
       <input

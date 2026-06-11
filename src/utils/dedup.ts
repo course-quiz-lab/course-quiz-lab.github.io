@@ -16,7 +16,9 @@ export function questionKey(q: QuestionItem): string {
  * Deduplicate an array of questions, keeping the first occurrence per normalized key.
  * Returns the deduplicated array.
  */
-export function deduplicateQuestions(questions: QuestionItem[]): QuestionItem[] {
+export function deduplicateQuestions(
+  questions: QuestionItem[],
+): QuestionItem[] {
   const seen = new Set<string>();
   const result: QuestionItem[] = [];
   for (const q of questions) {
