@@ -14,7 +14,7 @@
         "@mdi/js": "^7.4.47",
         "idb": "^8.0.3",
         "moment": "^2.30.1",
-        "pinia": "^4.0.2",
+        "pinia": "^4.0.3",
         "vue": "^3.5.41",
         "vue-router": "^5.2.0",
         "xlsx": "^0.18.5"
@@ -27,8 +27,8 @@
         "prettier": "^3.9.6",
         "tailwindcss": "^4.3.3",
         "typescript": "~7.0.2",
-        "vite": "^8.2.1",
+        "vite": "^8.2.2",
         "vite-plugin-bundle-prefetch": "^0.0.4",
-        "vue-tsc": "^3.3.9"
+        "vue-tsc": "^3.3.11"
     }
 }
