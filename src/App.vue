@@ -4,7 +4,9 @@ import AppShell from './components/AppShell.vue';
 </script>
 
 <template>
-  <AppShell>
-    <RouterView />
-  </AppShell>
+  <UApp>
+    <AppShell>
+      <RouterView />
+    </AppShell>
+  </UApp>
 </template>

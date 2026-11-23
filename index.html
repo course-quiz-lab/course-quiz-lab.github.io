@@ -5,6 +5,25 @@
     <link rel="icon" type="image/svg+xml" href="/q-badge.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>course quiz lab</title>
+    <script>
+      // 在首屏渲染前应用暗色偏好，避免闪白。
+      // 键名与 @vueuse/core 的 useDark 保持一致，Nuxt UI 的 color-mode 插件
+      // 也读取同一个值，因此不会出现两套状态互相覆盖。
+      (function () {
+        try {
+          var stored = localStorage.getItem('vueuse-color-scheme');
+          var prefersDark =
+            window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var dark = stored === 'dark' || ((!stored || stored === 'auto') && prefersDark);
+          var root = document.documentElement;
+          root.classList.toggle('dark', !!dark);
+          root.classList.toggle('light', !dark);
+        } catch (e) {
+          /* ignore */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

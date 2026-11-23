@@ -56,7 +56,8 @@ const router = createRouter({
         {
           path: 'cloud-progress',
           name: 'import-cloud-progress',
-          component: () => import('../pages/import/ImportCloudProgressPage.vue'),
+          component: () =>
+            import('../pages/import/ImportCloudProgressPage.vue'),
           meta: { title: '下载进度', back: '/import/cloud' },
         },
         {

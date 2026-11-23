@@ -1,43 +1,64 @@
 <script setup lang="ts">
-import { mdiArrowLeft } from '@mdi/js';
-import { useRouter } from 'vue-router';
-import AppIcon from './AppIcon.vue';
+import { computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 const props = defineProps<{
   title: string;
+  description?: string;
   maxWidth?: string;
   showBack?: boolean;
 }>();
 
+const route = useRoute();
 const router = useRouter();
 
+const shouldShowBack = computed(
+  () => props.showBack ?? Boolean(route.meta?.back),
+);
+
 function goBack() {
-  router.back();
+  const back = route.meta?.back as string | undefined;
+  if (back) {
+    router.push(back);
+  } else {
+    router.back();
+  }
 }
 </script>
 
 <template>
-  <div
-    class="page"
-    :style="
-      maxWidth
-        ? { maxWidth: maxWidth, marginLeft: 'auto', marginRight: 'auto' }
-        : undefined
-    "
-  >
-    <div class="flex items-center gap-3 mb-6">
-      <button
-        v-if="showBack"
-        class="border-none bg-transparent p-2 -ml-2 rounded-full cursor-pointer text-muted hover:bg-surface-soft hover:text-foreground transition-colors shrink-0"
+  <div class="page mx-auto w-full" :style="maxWidth ? { maxWidth } : undefined">
+    <div class="space-y-3">
+      <UButton
+        v-if="shouldShowBack"
+        variant="link"
+        color="neutral"
+        icon="i-lucide-arrow-left"
+        size="sm"
+        class="px-0 text-muted"
         @click="goBack"
       >
-        <AppIcon :path="mdiArrowLeft" :size="24" />
-      </button>
-      <h1 class="text-3xl max-sm:text-2xl m-0">{{ title }}</h1>
-      <slot name="header-actions" />
+        返回
+      </UButton>
+
+      <UPageHeader
+        :title="title"
+        :description="description"
+        :ui="{
+          root: 'border-b-0 py-0',
+          container: 'px-0',
+          title: 'text-2xl font-semibold tracking-tight sm:text-3xl',
+          description: 'mt-2 text-sm text-muted',
+        }"
+      >
+        <template v-if="$slots['header-actions']" #links>
+          <slot name="header-actions" />
+        </template>
+      </UPageHeader>
+
+      <slot name="subtitle" />
     </div>
 
-    <slot name="subtitle" />
     <slot />
   </div>
 </template>

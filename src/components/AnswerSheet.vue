@@ -1,4 +1,10 @@
 <script setup lang="ts">
+/**
+ * 保留自定义实现：Nuxt UI 没有与“按行虚拟滚动的答题卡网格”对应的组件。
+ * 这里需要按 currentIndex 计算可见行、保持 5/8/10 列响应式布局以及逐题状态配色，
+ * 用 UButton 逐格包裹反而会丢失紧凑尺寸与状态边框，因此保留原生 button 网格。
+ * 列数必须与模板中的 grid-cols-* 断点保持一致，否则虚拟滚动的行窗口会错位。
+ */
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -14,21 +20,32 @@ const emit = defineEmits<{ (e: 'select', index: number): void }>();
 
 const gridRef = ref<HTMLElement | null>(null);
 const showAll = ref(false);
-const cols = ref(5); // default 5 cols
+
+/** 与模板中的 grid-cols-* 断点保持一致（sm=640px、lg=1024px） */
+function resolveCols(width: number) {
+  // >= lg：桌面右上角固定宽度侧边栏，5 列即可
+  // sm ~ lg：答题卡占满整行，用 10 列压缩按钮高度
+  // < sm：手机整行，列数更多，避免按钮被拉成大方块
+  if (width >= 1024) return 5;
+  if (width >= 640) return 10;
+  return 8;
+}
+
+// 首帧就按真实视口取列数，避免与 CSS 断点不一致导致行窗口错位
+const cols = ref(
+  resolveCols(typeof window === 'undefined' ? 1024 : window.innerWidth),
+);
 
 const statusStyles: Record<string, string> = {
-  correct: '!border-[rgba(47,133,90,0.6)] !bg-[rgba(47,133,90,0.12)]',
-  partial: '!border-[rgba(226,181,109,0.8)] !bg-[rgba(226,181,109,0.18)]',
-  wrong: '!border-[rgba(185,74,60,0.6)] !bg-[rgba(185,74,60,0.1)]',
-  unanswered: '',
-  answered: '!border-[rgba(47,111,107,0.4)] !bg-[rgba(47,111,107,0.08)]',
+  correct: 'border-success/50 bg-success/10 text-success',
+  partial: 'border-warning/50 bg-warning/10 text-warning',
+  wrong: 'border-error/50 bg-error/10 text-error',
+  answered: 'border-primary/40 bg-primary/10 text-primary',
+  unanswered: 'border-default bg-default text-muted',
 };
 
 function updateCols() {
-  const w = window.innerWidth;
-  if (w >= 768 && w < 1024)
-    cols.value = 10; // md
-  else cols.value = 5; // default / lg
+  cols.value = resolveCols(window.innerWidth);
 }
 
 onMounted(() => {
@@ -76,7 +93,7 @@ const displayedIndices = computed(() => {
 });
 
 function gridItemClass(status: string) {
-  return statusStyles[status] ?? '';
+  return statusStyles[status] ?? statusStyles.unanswered;
 }
 
 function scrollToCurrent() {
@@ -103,21 +120,26 @@ watch(showAll, () => {
 
 <template>
   <aside
-    class="sticky top-[100px] p-4 rounded-2xl bg-surface border border-[rgba(43,34,24,0.12)] self-start max-lg:!static max-lg:order-first select-none"
+    class="h-fit select-none rounded-xl border border-default bg-default p-4 max-lg:order-first lg:sticky lg:top-40"
   >
-    <div class="text-sm mb-[12px] text-muted">答题卡</div>
+    <div class="mb-3 flex items-center justify-between">
+      <span class="text-sm font-medium text-highlighted">答题卡</span>
+      <span class="text-xs text-muted">{{ total }} 题</span>
+    </div>
+
     <div
       ref="gridRef"
-      class="grid grid-cols-5 md:grid-cols-10 lg:grid-cols-5 gap-[12px] max-sm:gap-2 max-h-[200px] lg:max-h-[460px] overflow-y-auto overflow-x-hidden pr-2"
+      class="grid max-h-[200px] grid-cols-8 gap-1.5 overflow-y-auto overflow-x-hidden pr-1 sm:grid-cols-10 lg:max-h-[460px] lg:grid-cols-5 lg:gap-2"
     >
       <button
         v-for="i in displayedIndices"
         :key="i"
-        class="border border-[rgba(43,34,24,0.12)] bg-surface-grid rounded-[8px] px-1 py-1.5 text-[11px] leading-none cursor-pointer transition-all duration-200 min-w-0"
+        type="button"
+        class="flex h-9 min-w-0 cursor-pointer items-center justify-center rounded-md border text-xs font-medium leading-none transition-colors duration-150 lg:aspect-square lg:h-auto"
         :class="[
           gridItemClass(statuses[i]),
           i === currentIndex && props.shouldShowCurrent !== false
-            ? 'ring-1 ring-inset ring-[color:var(--brand)]'
+            ? 'ring-2 ring-primary ring-offset-1 ring-offset-default'
             : '',
         ]"
         @click="emit('select', i)"
@@ -125,11 +147,14 @@ watch(showAll, () => {
         {{ i + 1 }}
       </button>
     </div>
-    <button
-      class="mt-3 w-full text-xs text-muted hover:text-brand border-none bg-transparent cursor-pointer transition-colors py-1"
+
+    <UButton
+      variant="link"
+      color="neutral"
+      size="xs"
+      class="mt-2 w-full justify-center text-muted"
+      :label="showAll ? '收起' : `展开全部（${total} 题）`"
       @click="showAll = !showAll"
-    >
-      {{ showAll ? '收起' : `展开全部 (${total} 题)` }}
-    </button>
+    />
   </aside>
 </template>

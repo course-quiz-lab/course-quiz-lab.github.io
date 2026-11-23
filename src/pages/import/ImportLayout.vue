@@ -14,35 +14,54 @@ const currentStep = computed<1 | 2 | 3>(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-8 sm:gap-5">
-    <div class="max-w-[720px] mx-auto px-4 w-full mb-2 lg:mb-4">
-      <ImportStepIndicator :current-step="currentStep" class="!mb-0" />
+  <div class="mx-auto w-full max-w-5xl space-y-8">
+    <div class="space-y-3">
+      <UButton
+        to="/"
+        variant="link"
+        color="neutral"
+        size="sm"
+        icon="i-lucide-arrow-left"
+        class="px-0 text-muted"
+        label="返回首页"
+      />
+      <div>
+        <h1
+          class="text-2xl font-semibold tracking-tight text-highlighted sm:text-3xl"
+        >
+          导入题库
+        </h1>
+        <p class="mt-1 text-sm text-muted">
+          支持 JSON、Excel、链接与云端题库，导入后保存在本地浏览器。
+        </p>
+      </div>
     </div>
-    <div class="mx-auto px-4 w-full max-w-[1024px]">
-      <RouterView v-slot="{ Component }">
-        <Transition name="slide" mode="out-in">
-          <component :is="Component" />
-        </Transition>
-      </RouterView>
-    </div>
+
+    <ImportStepIndicator :current-step="currentStep" />
+
+    <RouterView v-slot="{ Component }">
+      <Transition name="fade-slide" mode="out-in">
+        <component :is="Component" />
+      </Transition>
+    </RouterView>
   </div>
 </template>
 
 <style scoped>
-.slide-enter-active,
-.slide-leave-active {
+.fade-slide-enter-active,
+.fade-slide-leave-active {
   transition:
-    opacity 0.2s ease,
-    transform 0.25s ease;
+    opacity 0.18s ease,
+    transform 0.2s ease;
 }
 
-.slide-enter-from {
+.fade-slide-enter-from {
   opacity: 0;
-  transform: translateX(24px);
+  transform: translateY(8px);
 }
 
-.slide-leave-to {
+.fade-slide-leave-to {
   opacity: 0;
-  transform: translateX(-24px);
+  transform: translateY(-8px);
 }
 </style>

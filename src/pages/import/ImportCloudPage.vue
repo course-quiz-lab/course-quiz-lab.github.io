@@ -1,17 +1,6 @@
 <script setup lang="ts">
-import {
-  mdiCheck,
-  mdiDownload,
-  mdiGithub,
-  mdiMagnify,
-  mdiRefresh,
-  mdiSortVariant,
-} from '@mdi/js';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import AppButton from '../../components/ui/AppButton.vue';
-import AppCard from '../../components/ui/AppCard.vue';
-import AppIcon from '../../components/ui/AppIcon.vue';
 import Pagination from '../../components/ui/Pagination.vue';
 import { useImportStore } from '../../stores/import';
 import type { CloudBankEntry, CloudBankIndex } from '../../types/quiz';
@@ -180,177 +169,194 @@ async function downloadSelected() {
 </script>
 
 <template>
-  <div>
-    <AppCard class="!p-4 sm:!p-5">
-      <!-- Header -->
-      <div class="flex items-center gap-2 mb-4">
-        <span
-          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-brand text-white text-[11px] font-bold shrink-0"
-          >2</span
-        >
-        <h2 class="text-base max-sm:text-sm">云端题库</h2>
+  <div class="mx-auto w-full max-w-4xl">
+    <UCard>
+      <template #header>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span
+              class="grid size-6 place-items-center rounded-full bg-primary text-xs font-semibold text-white"
+            >
+              2
+            </span>
+            <h2 class="text-sm font-semibold text-highlighted">云端题库</h2>
+          </div>
+          <UButton
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            icon="i-lucide-refresh-cw"
+            label="刷新"
+            title="刷新列表（清除缓存）"
+            @click="fetchCloudIndex"
+          />
+        </div>
+      </template>
+
+      <div v-if="isLoading" class="space-y-3">
+        <USkeleton class="h-10 w-full rounded-lg" />
+        <div class="grid gap-4 sm:grid-cols-2">
+          <USkeleton v-for="i in 4" :key="i" class="h-24 w-full rounded-xl" />
+        </div>
       </div>
 
-      <!-- Loading -->
-      <div v-if="isLoading" class="py-12 text-center text-sm text-muted">
-        加载中…
-      </div>
-
-      <!-- Error -->
-      <div
+      <UAlert
         v-else-if="error"
-        class="p-4 rounded-xl border border-[rgba(185,74,60,0.4)] bg-[rgba(185,74,60,0.08)] text-center"
+        color="error"
+        variant="soft"
+        icon="i-lucide-cloud-off"
+        title="加载失败"
+        :description="error"
       >
-        <p class="text-sm text-danger">{{ error }}</p>
-        <AppButton class="mt-3" @click="fetchCloudIndex">重试</AppButton>
-      </div>
+        <template #actions>
+          <UButton
+            color="error"
+            variant="outline"
+            size="sm"
+            label="重试"
+            @click="fetchCloudIndex"
+          />
+        </template>
+      </UAlert>
 
-      <!-- Content -->
       <template v-else>
         <!-- Toolbar -->
         <div
-          class="flex flex-wrap items-center gap-3 pb-4 mb-4 border-b border-[color:var(--border)]"
+          class="flex flex-wrap items-center gap-3 border-b border-default pb-4"
         >
-          <!-- Search -->
-          <div class="relative flex-1 min-w-[180px] max-w-[320px]">
-            <AppIcon
-              :path="mdiMagnify"
-              :size="16"
-              class="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
-            />
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="搜索题库名称、课程、作者…"
-              class="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-[color:var(--border)] bg-surface outline-none transition-colors duration-150 focus:border-brand"
-            />
-          </div>
+          <UInput
+            v-model="searchQuery"
+            icon="i-lucide-search"
+            placeholder="搜索题库名称、课程、作者…"
+            class="min-w-[180px] max-w-xs flex-1"
+          />
 
-          <!-- Filter: unimported only -->
-          <label
-            class="flex items-center gap-1.5 text-xs text-muted cursor-pointer select-none shrink-0"
-          >
-            <input
-              v-model="showUnimportedOnly"
-              type="checkbox"
-              class="accent-brand"
-            />
-            仅显示未导入
-          </label>
+          <UCheckbox v-model="showUnimportedOnly" label="仅显示未导入" />
 
-          <!-- Sort buttons -->
           <div class="flex items-center gap-1">
-            <span class="text-xs text-muted mr-1 flex items-center gap-0.5">
-              <AppIcon :path="mdiSortVariant" :size="14" />
+            <span class="mr-1 flex items-center gap-0.5 text-xs text-muted">
+              <UIcon name="i-lucide-arrow-up-down" class="size-3.5" />
               排序
             </span>
-            <button
+            <UButton
               v-for="opt in [
                 { key: 'name', label: '名称' },
-                { key: 'course', label: '课程名称' },
+                { key: 'course', label: '课程' },
                 { key: 'total', label: '题数' },
               ] satisfies { key: SortKey; label: string }[]"
               :key="opt.key"
-              class="px-2.5 py-1 text-xs rounded-md border border-[color:var(--border)] bg-surface cursor-pointer transition-colors duration-150 hover:border-brand"
-              :class="{
-                '!border-brand !bg-[rgba(47,111,107,0.08)] !text-brand':
-                  sortKey === opt.key,
-              }"
+              size="xs"
+              :variant="sortKey === opt.key ? 'soft' : 'ghost'"
+              :color="sortKey === opt.key ? 'primary' : 'neutral'"
               @click="toggleSort(opt.key)"
             >
               {{ opt.label }}
-              <span v-if="sortKey === opt.key" class="ml-0.5">
-                {{ sortAsc ? '↑' : '↓' }}
-              </span>
-            </button>
+              <UIcon
+                v-if="sortKey === opt.key"
+                :name="sortAsc ? 'i-lucide-arrow-up' : 'i-lucide-arrow-down'"
+                class="ml-0.5 size-3"
+              />
+            </UButton>
           </div>
-
-          <!-- Refresh -->
-          <button
-            class="inline-flex items-center gap-1 text-xs text-muted border border-[color:var(--border)] bg-surface rounded-lg px-2.5 py-1.5 cursor-pointer transition-colors duration-150 hover:text-brand hover:border-brand ml-auto"
-            @click="fetchCloudIndex"
-            title="刷新列表（清除缓存）"
-          >
-            <AppIcon :path="mdiRefresh" :size="14" />
-            <span>刷新</span>
-          </button>
         </div>
 
         <!-- Batch actions -->
-        <div class="flex flex-wrap items-center gap-2 mb-3">
-          <AppButton
-            variant="inline"
-            :icon-path="mdiCheck"
-            :icon-size="14"
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <UButton
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            icon="i-lucide-check-check"
+            label="全选本页"
             @click="selectAllVisible"
-          >
-            全选本页
-          </AppButton>
-          <AppButton
+          />
+          <UButton
             v-if="selected.size > 0"
-            variant="inline"
-            :icon-path="mdiDownload"
-            :icon-size="14"
+            size="xs"
+            icon="i-lucide-download"
+            :label="`下载选中（${selected.size}）`"
             @click="downloadSelected"
-          >
-            下载选中（{{ selected.size }}）
-          </AppButton>
-          <button
+          />
+          <UButton
             v-if="selected.size > 0"
-            class="text-xs text-muted hover:text-danger border-none bg-transparent cursor-pointer transition-colors"
+            variant="link"
+            color="neutral"
+            size="xs"
+            class="px-0 text-muted"
+            label="取消选择"
             @click="clearSelection"
-          >
-            取消选择
-          </button>
+          />
         </div>
 
-        <!-- Summary -->
-        <p class="text-xs text-muted mb-3">
+        <p class="mt-3 text-xs text-muted">
           共 {{ filteredAndSorted.length }} 个云端题库
-          <span v-if="filteredAndSorted.length !== banks.length">
-            （已筛选）
-          </span>
-          <span class="ml-2"> 第 {{ currentPage }} / {{ totalPages }} 页 </span>
+          <span v-if="filteredAndSorted.length !== banks.length"
+            >（已筛选）</span
+          >
+          <span class="ml-2">第 {{ currentPage }} / {{ totalPages }} 页</span>
         </p>
 
         <!-- Card grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <div
+        <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <UCard
             v-for="entry in paginatedBanks"
             :key="entry.url"
-            class="min-w-0 flex items-start gap-2.5 p-2.5 rounded-xl border border-[color:var(--border)] bg-surface-soft transition-all duration-150 select-none cursor-pointer"
-            :class="{
-              'border-brand': selected.has(entry.url),
-            }"
+            class="min-w-0 cursor-pointer select-none transition duration-150"
+            :class="
+              selected.has(entry.url)
+                ? 'border-primary bg-primary/5'
+                : 'hover:border-primary/40'
+            "
+            :ui="{ body: 'flex items-start gap-3 p-3.5' }"
             @click="toggleSelect(entry)"
           >
-            <!-- Selected badge -->
+            <UIcon
+              :name="
+                selected.has(entry.url)
+                  ? 'i-lucide-square-check-big'
+                  : 'i-lucide-square'
+              "
+              class="mt-0.5 size-4 shrink-0"
+              :class="selected.has(entry.url) ? 'text-primary' : 'text-dimmed'"
+            />
 
-            <!-- Card body -->
-            <span class="flex-1 min-w-0">
-              <span class="font-medium text-sm">
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-highlighted">
                 {{ entry.metadata.name }}
-              </span>
-              <span class="block text-xs text-muted mt-0.5">
+              </p>
+              <p class="mt-0.5 truncate text-xs text-muted">
                 {{ entry.metadata.course }}
-              </span>
-              <span class="block text-[11px] text-muted/70 mt-0.5">
+              </p>
+              <p class="mt-1 text-xs text-dimmed">
                 {{ totalQuestions(entry) }} 题 ·
                 {{ entry.metadata.author || '未知作者' }}
-              </span>
-            </span>
-            <button
+              </p>
+            </div>
+
+            <UButton
               v-if="entry.metadata.sourceUrl"
-              class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[color:var(--border)] bg-surface text-muted cursor-pointer transition-colors duration-150 hover:text-brand hover:border-brand"
+              variant="ghost"
+              color="neutral"
+              icon="i-lucide-github"
+              size="xs"
+              square
+              class="shrink-0"
               :title="entry.metadata.sourceUrl"
+              aria-label="打开来源链接"
               @click.stop="openGithub(entry.metadata.sourceUrl)"
-            >
-              <AppIcon :path="mdiGithub" :size="14" />
-            </button>
-          </div>
+            />
+          </UCard>
         </div>
 
-        <!-- Pagination -->
+        <UEmpty
+          v-if="paginatedBanks.length === 0"
+          icon="i-lucide-search-x"
+          title="没有匹配的题库"
+          description="调整搜索或筛选条件试试。"
+          variant="naked"
+          class="py-10"
+        />
+
         <Pagination
           v-if="totalPages > 1"
           :current="currentPage"
@@ -358,19 +364,10 @@ async function downloadSelected() {
           @update:current="currentPage = $event"
         />
 
-        <!-- Empty -->
-        <div
-          v-if="paginatedBanks.length === 0"
-          class="py-12 text-center text-sm text-muted"
-        >
-          没有匹配的题库
-        </div>
-
-        <!-- Updated time -->
-        <div v-if="updatedAt" class="text-xs text-muted/40 text-center mt-6">
+        <p v-if="updatedAt" class="mt-6 text-center text-xs text-dimmed">
           索引最后构建于 {{ new Date(updatedAt).toLocaleString('zh-CN') }}
-        </div>
+        </p>
       </template>
-    </AppCard>
+    </UCard>
   </div>
 </template>

@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import { mdiDeleteOutline, mdiFileDownloadOutline } from '@mdi/js';
-import { onMounted, ref } from 'vue';
-import AppButton from '../components/ui/AppButton.vue';
-import AppCard from '../components/ui/AppCard.vue';
+import { computed, onMounted, ref } from 'vue';
 import PageLayout from '../components/ui/PageLayout.vue';
 import type { Bank, BankMetaEntry } from '../types/bank';
 import { clearBank, listBankMetas, loadBank } from '../utils/idb';
@@ -11,6 +8,10 @@ const bankMetas = ref<BankMetaEntry[]>([]);
 const isLoading = ref(true);
 const deletingId = ref<string | null>(null);
 const exportingId = ref<string | null>(null);
+
+const totalQuestions = computed(() =>
+  bankMetas.value.reduce((sum, entry) => sum + (entry.meta.total ?? 0), 0),
+);
 
 onMounted(async () => {
   bankMetas.value = await listBankMetas();
@@ -108,66 +109,84 @@ async function handleExport(entry: BankMetaEntry) {
 </script>
 
 <template>
-  <PageLayout title="管理题库">
-    <!-- Loading -->
-    <div v-if="isLoading" class="text-muted text-sm">加载中…</div>
+  <PageLayout
+    title="管理题库"
+    :description="
+      bankMetas.length
+        ? `共 ${bankMetas.length} 个题库 · ${totalQuestions} 道题目`
+        : '查看、导出或删除已导入的题库。'
+    "
+  >
+    <template #header-actions>
+      <UButton to="/import" icon="i-lucide-download" label="导入题库" size="sm" />
+    </template>
 
-    <!-- Empty state -->
-    <div
-      v-else-if="!bankMetas.length"
-      class="text-center py-16 bg-surface rounded-2xl border border-[color:var(--border)]"
-    >
-      <p class="text-muted mb-4">还没有导入过题库</p>
-      <AppButton :to="'/import'" variant="secondary">去导入</AppButton>
+    <div v-if="isLoading" class="grid gap-4 md:grid-cols-2">
+      <USkeleton v-for="i in 4" :key="i" class="h-36 w-full rounded-xl" />
     </div>
 
-    <!-- Bank list -->
-    <div v-else class="flex flex-col gap-4">
-      <div class="text-sm text-muted mb-1">
-        共 {{ bankMetas.length }} 个题库
-      </div>
-      <div class="grid grid-cols-2 gap-4 max-lg:grid-cols-1">
-        <AppCard
-          v-for="entry in bankMetas"
-          :key="entry.bankId"
-          class="!p-5 flex items-center justify-between gap-4 max-sm:flex-col max-sm:items-start"
-        >
+    <UEmpty
+      v-else-if="bankMetas.length === 0"
+      icon="i-lucide-database"
+      title="还没有导入过题库"
+      description="支持 JSON、Excel、链接与云端导入，数据保存在本地浏览器。"
+      variant="naked"
+      class="rounded-xl border border-dashed border-default py-16"
+    >
+      <template #actions>
+        <UButton to="/import" icon="i-lucide-download" label="去导入" />
+      </template>
+    </UEmpty>
+
+    <div v-else class="grid gap-4 md:grid-cols-2">
+      <UCard
+        v-for="entry in bankMetas"
+        :key="entry.bankId"
+        :ui="{ body: 'p-5' }"
+        class="transition duration-200 hover:border-primary/40"
+      >
+        <div class="flex items-start gap-3">
+          <span
+            class="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"
+          >
+            <UIcon name="i-lucide-book-open" class="size-5" />
+          </span>
           <div class="min-w-0 flex-1">
-            <div class="font-medium text-base">
+            <p class="truncate text-base font-medium text-highlighted">
               {{ entry.meta.name }}
-            </div>
-            <div class="block text-sm text-muted mt-0.5">
+            </p>
+            <p class="mt-0.5 truncate text-sm text-muted">
               {{ entry.meta.course }}
-            </div>
-            <div class="block text-[13px] text-muted/70 mt-0.5">
+            </p>
+            <p class="mt-1 text-xs text-dimmed">
               {{ entry.meta.total ?? '?' }} 题 ·
               {{ entry.meta.author || '未知作者' }} ·
               {{ new Date(entry.importedAt).toLocaleString('zh-CN') }}
-            </div>
+            </p>
           </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <AppButton
-              variant="ghost"
-              :icon-path="mdiFileDownloadOutline"
-              :icon-size="16"
-              :disabled="exportingId === entry.bankId"
-              @click="handleExport(entry)"
-            >
-              {{ exportingId === entry.bankId ? '导出中…' : '导出' }}
-            </AppButton>
-            <AppButton
-              variant="ghost"
-              :icon-path="mdiDeleteOutline"
-              :icon-size="16"
-              class="!text-danger"
-              :disabled="deletingId === entry.bankId"
-              @click="handleDelete(entry)"
-            >
-              {{ deletingId === entry.bankId ? '删除中…' : '删除' }}
-            </AppButton>
-          </div>
-        </AppCard>
-      </div>
+        </div>
+
+        <div class="mt-4 flex items-center justify-end gap-2">
+          <UButton
+            size="sm"
+            variant="outline"
+            color="neutral"
+            icon="i-lucide-download"
+            :loading="exportingId === entry.bankId"
+            label="导出"
+            @click="handleExport(entry)"
+          />
+          <UButton
+            size="sm"
+            variant="ghost"
+            color="error"
+            icon="i-lucide-trash"
+            :loading="deletingId === entry.bankId"
+            label="删除"
+            @click="handleDelete(entry)"
+          />
+        </div>
+      </UCard>
     </div>
   </PageLayout>
 </template>

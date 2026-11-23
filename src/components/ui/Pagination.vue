@@ -1,94 +1,70 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { mdiChevronLeft, mdiChevronRight } from '@mdi/js';
-import AppIcon from './AppIcon.vue';
-
-const props = withDefaults(
-  defineProps<{
-    current: number;
-    total: number;
-    pageSize?: number;
-  }>(),
-  { pageSize: undefined },
-);
+/**
+ * 轻量分页适配层：内部完全使用 Nuxt UI 的 UPagination，
+ * 对外仍暴露 current/total 语义，避免改动调用方。
+ */
+defineProps<{
+  current: number;
+  total: number;
+  pageSize?: number;
+}>();
 
 const emit = defineEmits<{
   (e: 'update:current', page: number): void;
 }>();
-
-const totalPages = computed(() => Math.max(1, props.total));
-
-function goToPage(page: number) {
-  if (page < 1 || page > totalPages.value || page === props.current) return;
-  emit('update:current', page);
-}
-
-const visiblePages = computed<(number | 'ellipsis')[]>(() => {
-  const total = totalPages.value;
-  const current = props.current;
-  const pages: (number | 'ellipsis')[] = [];
-
-  if (total <= 7) {
-    for (let i = 1; i <= total; i++) pages.push(i);
-    return pages;
-  }
-
-  pages.push(1);
-
-  if (current > 3) pages.push('ellipsis');
-
-  const start = Math.max(2, current - 1);
-  const end = Math.min(total - 1, current + 1);
-  for (let i = start; i <= end; i++) pages.push(i);
-
-  if (current < total - 2) pages.push('ellipsis');
-
-  pages.push(total);
-
-  return pages;
-});
 </script>
 
 <template>
-  <div
-    v-if="totalPages > 1"
+  <UPagination
+    v-if="total > 1"
+    :page="current"
+    :total="total"
+    :items-per-page="1"
+    :sibling-count="1"
+    :show-controls="false"
     class="flex items-center justify-center gap-1 pt-4"
+    @update:page="emit('update:current', $event)"
   >
-    <button
-      class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-[color:var(--border)] bg-surface text-muted cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:border-brand transition-colors duration-150"
-      :disabled="current <= 1"
-      @click="goToPage(current - 1)"
-    >
-      <AppIcon :path="mdiChevronLeft" :size="16" />
-    </button>
+    <template #prev>
+      <UButton
+        variant="outline"
+        color="neutral"
+        icon="i-lucide-chevron-left"
+        size="sm"
+        square
+        :disabled="current <= 1"
+        aria-label="上一页"
+      />
+    </template>
 
-    <template v-for="(item, idx) in visiblePages" :key="idx">
+    <template #item="{ item, page }">
+      <UButton
+        :label="String(item.value)"
+        :variant="page === item.value ? 'solid' : 'ghost'"
+        :color="page === item.value ? 'primary' : 'neutral'"
+        size="sm"
+        square
+      />
+    </template>
+
+    <template #ellipsis>
       <span
-        v-if="item === 'ellipsis'"
-        class="inline-flex items-center justify-center w-8 h-8 text-xs text-muted select-none"
+        class="inline-flex size-8 select-none items-center justify-center text-xs text-muted"
       >
         …
       </span>
-      <button
-        v-else
-        class="inline-flex items-center justify-center w-8 h-8 text-xs font-medium rounded-lg border transition-colors duration-150 cursor-pointer"
-        :class="
-          item === current
-            ? 'border-brand bg-brand text-white'
-            : 'border-[color:var(--border)] bg-surface text-muted hover:border-brand'
-        "
-        @click="goToPage(item)"
-      >
-        {{ item }}
-      </button>
     </template>
 
-    <button
-      class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-[color:var(--border)] bg-surface text-muted cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:border-brand transition-colors duration-150"
-      :disabled="current >= totalPages"
-      @click="goToPage(current + 1)"
-    >
-      <AppIcon :path="mdiChevronRight" :size="16" />
-    </button>
-  </div>
+    <template #next>
+      <UButton
+        variant="outline"
+        color="neutral"
+        icon="i-lucide-chevron-right"
+        size="sm"
+        square
+        :disabled="current >= total"
+        aria-label="下一页"
+      />
+    </template>
+  </UPagination>
 </template>

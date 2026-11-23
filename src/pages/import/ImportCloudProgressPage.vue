@@ -1,10 +1,6 @@
 <script setup lang="ts">
-import { mdiCheck, mdiClose, mdiDownload, mdiLoading, mdiStop } from '@mdi/js';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import AppButton from '../../components/ui/AppButton.vue';
-import AppCard from '../../components/ui/AppCard.vue';
-import AppIcon from '../../components/ui/AppIcon.vue';
 import { useBankStore } from '../../stores/bank';
 import { useImportStore, type DownloadQueueItem } from '../../stores/import';
 import type { CloudBankEntry } from '../../types/quiz';
@@ -117,131 +113,126 @@ function toggleError(url: string) {
   else next.add(url);
   expandedErrors.value = next;
 }
+
+function statusIcon(status: DownloadQueueItem['status']) {
+  switch (status) {
+    case 'pending':
+      return { name: 'i-lucide-download', class: 'text-muted' };
+    case 'downloading':
+      return {
+        name: 'i-lucide-loader-circle',
+        class: 'animate-spin text-primary',
+      };
+    case 'success':
+      return { name: 'i-lucide-check', class: 'text-success' };
+    case 'cancelled':
+      return { name: 'i-lucide-x', class: 'text-warning' };
+    default:
+      return { name: 'i-lucide-x', class: 'text-error' };
+  }
+}
 </script>
 
 <template>
-  <div class="max-w-[576px] mx-auto">
-    <AppCard class="!p-4 sm:!p-5">
-      <div class="flex items-center gap-2 mb-4">
-        <span
-          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-brand text-white text-[11px] font-bold shrink-0"
-        >
-          3
-        </span>
-        <h2 class="text-base max-sm:text-sm">下载进度</h2>
-      </div>
+  <div class="mx-auto w-full max-w-xl">
+    <UCard>
+      <template #header>
+        <div class="flex items-center gap-2">
+          <span
+            class="grid size-6 place-items-center rounded-full bg-primary text-xs font-semibold text-white"
+          >
+            3
+          </span>
+          <h2 class="text-sm font-semibold text-highlighted">下载进度</h2>
+        </div>
+      </template>
 
-      <!-- Progress summary -->
-      <div class="bg-surface-soft rounded-xl p-4 mb-4 grid gap-2 text-sm">
+      <div class="mb-4 space-y-2 rounded-lg bg-elevated p-4 text-sm">
         <div class="flex items-center justify-between">
           <span class="text-muted">总任务数</span>
-          <span class="font-semibold">{{ totalCount }}</span>
+          <span class="font-medium text-highlighted">{{ totalCount }}</span>
         </div>
         <div class="flex items-center justify-between">
           <span class="text-muted">已完成</span>
-          <span class="font-semibold">{{ doneCount }} / {{ totalCount }}</span>
+          <span class="font-medium text-highlighted">
+            {{ doneCount }} / {{ totalCount }}
+          </span>
         </div>
-        <div class="w-full h-2 bg-surface rounded-full overflow-hidden mt-3">
-          <div
-            class="h-full bg-brand rounded-full transition-all duration-300"
-            :style="{
-              width:
-                totalCount > 0 ? (doneCount / totalCount) * 100 + '%' : '0%',
-            }"
-          />
-        </div>
+        <UProgress
+          :model-value="doneCount"
+          :max="totalCount || 1"
+          class="mt-2"
+          size="sm"
+        />
       </div>
 
-      <!-- Download list -->
-      <div class="flex flex-col gap-2 max-h-[400px] overflow-y-auto pr-2">
+      <div class="flex max-h-[400px] flex-col gap-2 overflow-y-auto pr-1">
         <div
           v-for="item in queue"
           :key="item.entry.url"
-          class="flex items-center gap-3 p-3 rounded-lg border border-[color:var(--border)] text-sm"
+          class="flex items-start gap-3 rounded-lg border p-3 text-sm"
           :class="{
-            'border-brand/30 bg-brand/5': item.status === 'downloading',
-            'border-ok/30 bg-ok/5': item.status === 'success',
-            'border-danger/30 bg-danger/5': item.status === 'fail',
-            'border-[rgba(226,181,109,0.8)] bg-[rgba(226,181,109,0.18)]':
-              item.status === 'cancelled',
+            'border-primary/30 bg-primary/5': item.status === 'downloading',
+            'border-success/30 bg-success/5': item.status === 'success',
+            'border-error/30 bg-error/5': item.status === 'fail',
+            'border-warning/30 bg-warning/5': item.status === 'cancelled',
+            'border-default': item.status === 'pending',
           }"
         >
-          <!-- Status icon -->
-          <span class="shrink-0 w-5 h-5 flex items-center justify-center">
-            <AppIcon
-              v-if="item.status === 'pending'"
-              :path="mdiDownload"
-              :size="16"
-              class="text-muted"
-            />
-            <AppIcon
-              v-else-if="item.status === 'downloading'"
-              :path="mdiLoading"
-              :size="16"
-              class="text-brand animate-spin"
-            />
-            <AppIcon
-              v-else-if="item.status === 'success'"
-              :path="mdiCheck"
-              :size="16"
-              class="text-ok"
-            />
-            <AppIcon
-              v-else-if="item.status === 'cancelled'"
-              :path="mdiClose"
-              :size="16"
-              class="text-warn"
-            />
-            <AppIcon v-else :path="mdiClose" :size="16" class="text-danger" />
-          </span>
+          <UIcon
+            :name="statusIcon(item.status).name"
+            class="mt-0.5 size-4 shrink-0"
+            :class="statusIcon(item.status).class"
+          />
 
-          <!-- Info -->
-          <span class="flex-1 min-w-0">
-            <span class="block truncate font-medium">
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-medium text-highlighted">
               {{ item.entry.metadata.name }}
-            </span>
-            <span class="block text-xs text-muted">
+            </p>
+            <p class="text-xs text-muted">
               {{ item.entry.metadata.course }}
-            </span>
-          </span>
+            </p>
+          </div>
 
-          <!-- Error (click to expand) -->
-          <span
+          <button
             v-if="item.error"
-            class="text-xs shrink-0 max-w-[200px] cursor-pointer select-none"
+            type="button"
+            class="max-w-[200px] shrink-0 cursor-pointer select-none text-left text-xs"
             :class="[
               expandedErrors.has(item.entry.url) ? '' : 'truncate',
-              item.status === 'cancelled' ? 'text-warn' : 'text-danger',
+              item.status === 'cancelled' ? 'text-warning' : 'text-error',
             ]"
-            @click="toggleError(item.entry.url)"
             :title="expandedErrors.has(item.entry.url) ? '' : item.error"
+            @click="toggleError(item.entry.url)"
           >
             {{ item.error }}
-          </span>
+          </button>
           <span
             v-else-if="item.status === 'cancelled'"
-            class="text-xs text-warn shrink-0"
+            class="shrink-0 text-xs text-warning"
           >
             已取消
           </span>
         </div>
       </div>
 
-      <!-- Actions -->
-      <div class="flex gap-3 justify-center mt-6">
-        <AppButton
+      <div class="mt-6 flex justify-center gap-3">
+        <UButton
           :disabled="!isProcessing && isCancelled"
-          :icon-path="mdiStop"
-          :icon-size="18"
-          variant="secondary"
+          icon="i-lucide-square"
+          variant="outline"
+          color="neutral"
+          label="取消下载"
           @click="cancelDownload"
-        >
-          取消下载
-        </AppButton>
-        <AppButton variant="solid" @click="goBack" :disabled="isProcessing">
-          下一步
-        </AppButton>
+        />
+        <UButton
+          :disabled="isProcessing"
+          icon="i-lucide-arrow-right"
+          trailing
+          label="下一步"
+          @click="goBack"
+        />
       </div>
-    </AppCard>
+    </UCard>
   </div>
 </template>

@@ -34,9 +34,8 @@ const formatted = computed(() => {
 </script>
 
 <template>
-  <span
-    class="px-3.5 py-2 rounded-full bg-surface-soft border border-[rgba(43,34,24,0.12)] text-sm"
-  >
+  <UBadge color="warning" variant="soft" size="md" class="tabular-nums">
+    <UIcon name="i-lucide-timer" class="mr-1 size-3.5" />
     已用时 {{ formatted }}
-  </span>
+  </UBadge>
 </template>

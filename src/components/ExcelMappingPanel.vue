@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { mdiAutoFix, mdiTable } from '@mdi/js';
 import { computed, ref, watch } from 'vue';
 import type { QuestionItem } from '../types/bank';
 import type {
@@ -12,9 +11,6 @@ import {
   buildPreviewData,
   parseQuestionsWithMapping,
 } from '../utils/excel';
-import AppButton from './ui/AppButton.vue';
-import AppCheckbox from './ui/AppCheckbox.vue';
-import AppIcon from './ui/AppIcon.vue';
 
 const props = defineProps<{
   excelData: ExcelParseResult;
@@ -39,7 +35,6 @@ const difficultyCol = ref<number | null>(null);
 const isParsing = ref(false);
 const parseResult = ref<ReturnType<typeof buildPreviewData> | null>(null);
 const parseErrors = ref<string[]>([]);
-const mappingChanged = ref(false);
 
 // ── Computed ────────────────────────────────────────────
 
@@ -79,6 +74,27 @@ const optionalColumnOptions = computed(() => {
   return [{ value: null, label: '无（不导入）' }, ...columnOptions.value];
 });
 
+const typeSelectItems = computed(() =>
+  typeColumnOptions.value.map((o) => ({
+    label: o.label,
+    value: o.value === null ? 'none' : String(o.value),
+  })),
+);
+
+const otherSelectItems = computed(() =>
+  columnOptions.value.map((o) => ({
+    label: o.label,
+    value: String(o.value),
+  })),
+);
+
+const optionalSelectItems = computed(() =>
+  optionalColumnOptions.value.map((o) => ({
+    label: o.label,
+    value: o.value === null ? 'none' : String(o.value),
+  })),
+);
+
 const previewRows = computed(() => dataRows.value.slice(0, 5));
 
 const currentMapping = computed<ColumnMapping>(() => ({
@@ -92,6 +108,10 @@ const currentMapping = computed<ColumnMapping>(() => ({
 }));
 
 const sheetHasData = computed(() => dataRows.value.length > 0);
+
+const sheetItems = computed(() =>
+  props.excelData.sheetNames.map((name) => ({ label: name, value: name })),
+);
 
 // ── Watch sheet change ──────────────────────────────────
 
@@ -118,7 +138,6 @@ function runAutoDetect() {
   difficultyCol.value = detected.difficultyCol ?? null;
   parseResult.value = null;
   parseErrors.value = [];
-  mappingChanged.value = true;
 }
 
 function toggleOptionCol(colIndex: number) {
@@ -130,11 +149,35 @@ function toggleOptionCol(colIndex: number) {
   }
   parseResult.value = null;
   parseErrors.value = [];
-  mappingChanged.value = true;
 }
 
 function isOptionSelected(colIndex: number): boolean {
   return optionCols.value.includes(colIndex);
+}
+
+function updateTypeCol(value: string) {
+  typeCol.value = value === 'none' ? null : Number(value);
+  parseResult.value = null;
+}
+
+function updateStemCol(value: string) {
+  stemCol.value = Number(value);
+  parseResult.value = null;
+}
+
+function updateAnswerCol(value: string) {
+  answerCol.value = Number(value);
+  parseResult.value = null;
+}
+
+function updateAnalysisCol(value: string) {
+  analysisCol.value = value === 'none' ? null : Number(value);
+  parseResult.value = null;
+}
+
+function updateDifficultyCol(value: string) {
+  difficultyCol.value = value === 'none' ? null : Number(value);
+  parseResult.value = null;
 }
 
 function handleParse() {
@@ -166,224 +209,155 @@ runAutoDetect();
 </script>
 
 <template>
-  <div class="grid gap-4 min-w-0">
+  <div class="grid min-w-0 gap-4">
     <!-- Sheet Selection -->
-    <div v-if="excelData.sheetNames.length > 1" class="min-w-0">
-      <label class="block text-sm font-medium mb-1.5">选择工作表</label>
-      <select
-        v-model="selectedSheet"
-        class="w-full min-w-0 px-3 py-2 rounded-lg border border-[color:var(--border)] bg-surface text-sm"
-      >
-        <option v-for="name in excelData.sheetNames" :key="name" :value="name">
-          {{ name }}
-        </option>
-      </select>
-    </div>
+    <UFormField v-if="excelData.sheetNames.length > 1" label="选择工作表">
+      <USelect v-model="selectedSheet" :items="sheetItems" class="w-full" />
+    </UFormField>
 
     <!-- Header Toggle -->
-    <AppCheckbox v-model="hasHeader"> 首行为表头 </AppCheckbox>
+    <UCheckbox v-model="hasHeader" label="首行为表头" />
 
     <!-- Column Mapping -->
-    <div class="grid gap-2.5 min-w-0">
-      <label class="text-sm font-medium">列映射配置</label>
+    <div class="grid min-w-0 gap-3">
+      <p class="text-sm font-medium text-highlighted">列映射配置</p>
 
       <!-- Type Column -->
-      <div class="flex items-center gap-2 max-w-full">
-        <span class="text-sm text-muted shrink-0 w-12">题型</span>
-        <select
-          :value="typeCol"
-          @input="
-            typeCol =
-              $event.target.value === '' ? null : Number($event.target.value);
-            parseResult = null;
-          "
-          class="flex-1 min-w-0 max-w-full px-2.5 py-2 rounded-lg border border-[color:var(--border)] bg-surface text-sm"
-        >
-          <option
-            v-for="opt in typeColumnOptions"
-            :key="opt.value"
-            :value="opt.value ?? ''"
-          >
-            {{ opt.label }}
-          </option>
-        </select>
+      <div class="flex max-w-full items-center gap-2">
+        <span class="w-12 shrink-0 text-xs text-muted">题型</span>
+        <USelect
+          :model-value="typeCol === null ? 'none' : String(typeCol)"
+          :items="typeSelectItems"
+          size="sm"
+          class="min-w-0 max-w-full flex-1"
+          @update:model-value="updateTypeCol"
+        />
       </div>
 
       <!-- Stem Column -->
-      <div class="flex items-center gap-2 max-w-full">
-        <span class="text-sm text-muted shrink-0 w-12">题干</span>
-        <select
-          :value="stemCol"
-          @input="
-            stemCol = Number($event.target.value);
-            parseResult = null;
-          "
-          class="flex-1 min-w-0 max-w-full px-2.5 py-2 rounded-lg border border-[color:var(--border)] bg-surface text-sm"
-        >
-          <option
-            v-for="opt in columnOptions"
-            :key="opt.value"
-            :value="opt.value"
-          >
-            {{ opt.label }}
-          </option>
-        </select>
+      <div class="flex max-w-full items-center gap-2">
+        <span class="w-12 shrink-0 text-xs text-muted">题干</span>
+        <USelect
+          :model-value="String(stemCol)"
+          :items="otherSelectItems"
+          size="sm"
+          class="min-w-0 max-w-full flex-1"
+          @update:model-value="updateStemCol"
+        />
       </div>
 
       <!-- Option Columns -->
-      <div class="flex items-start gap-2 max-w-full">
-        <span class="text-sm text-muted shrink-0 w-12 pt-2">选项</span>
-        <div class="flex-1 min-w-0 flex flex-wrap gap-1.5">
-          <button
+      <div class="flex max-w-full items-start gap-2">
+        <span class="w-12 shrink-0 pt-1 text-xs text-muted">选项</span>
+        <div class="flex min-w-0 flex-1 flex-wrap gap-1.5">
+          <UButton
             v-for="opt in columnOptions"
             :key="opt.value"
-            class="px-2 py-1 text-[11px] leading-tight rounded-md border cursor-pointer transition-all duration-150 truncate shrink-0"
-            :class="
-              isOptionSelected(opt.value)
-                ? 'border-brand bg-brand text-white'
-                : 'border-[color:var(--border)] bg-surface-soft text-muted hover:border-brand'
-            "
+            :variant="isOptionSelected(opt.value) ? 'solid' : 'outline'"
+            :color="isOptionSelected(opt.value) ? 'primary' : 'neutral'"
+            size="xs"
+            class="max-w-full truncate"
             :title="opt.label"
             @click="toggleOptionCol(opt.value)"
           >
             {{ opt.label }}
-          </button>
+          </UButton>
         </div>
       </div>
 
       <!-- Answer Column -->
-      <div class="flex items-center gap-2 max-w-full">
-        <span class="text-sm text-muted shrink-0 w-12">答案</span>
-        <select
-          :value="answerCol"
-          @input="
-            answerCol = Number($event.target.value);
-            parseResult = null;
-          "
-          class="flex-1 min-w-0 max-w-full px-2.5 py-2 rounded-lg border border-[color:var(--border)] bg-surface text-sm"
-        >
-          <option
-            v-for="opt in columnOptions"
-            :key="opt.value"
-            :value="opt.value"
-          >
-            {{ opt.label }}
-          </option>
-        </select>
+      <div class="flex max-w-full items-center gap-2">
+        <span class="w-12 shrink-0 text-xs text-muted">答案</span>
+        <USelect
+          :model-value="String(answerCol)"
+          :items="otherSelectItems"
+          size="sm"
+          class="min-w-0 max-w-full flex-1"
+          @update:model-value="updateAnswerCol"
+        />
       </div>
 
       <!-- Analysis Column (optional) -->
-      <div class="flex items-center gap-2 max-w-full">
-        <span class="text-sm text-muted shrink-0 w-12">解析</span>
-        <select
-          :value="analysisCol"
-          @input="
-            analysisCol =
-              $event.target.value === '' ? null : Number($event.target.value);
-            parseResult = null;
-          "
-          class="flex-1 min-w-0 max-w-full px-2.5 py-2 rounded-lg border border-[color:var(--border)] bg-surface text-sm"
-        >
-          <option
-            v-for="opt in optionalColumnOptions"
-            :key="opt.value"
-            :value="opt.value ?? ''"
-          >
-            {{ opt.label }}
-          </option>
-        </select>
+      <div class="flex max-w-full items-center gap-2">
+        <span class="w-12 shrink-0 text-xs text-muted">解析</span>
+        <USelect
+          :model-value="analysisCol === null ? 'none' : String(analysisCol)"
+          :items="optionalSelectItems"
+          size="sm"
+          class="min-w-0 max-w-full flex-1"
+          @update:model-value="updateAnalysisCol"
+        />
       </div>
 
       <!-- Difficulty Column (optional) -->
-      <div class="flex items-center gap-2 max-w-full">
-        <span class="text-sm text-muted shrink-0 w-12">难度</span>
-        <select
-          :value="difficultyCol"
-          @input="
-            difficultyCol =
-              $event.target.value === '' ? null : Number($event.target.value);
-            parseResult = null;
-          "
-          class="flex-1 min-w-0 max-w-full px-2.5 py-2 rounded-lg border border-[color:var(--border)] bg-surface text-sm"
-        >
-          <option
-            v-for="opt in optionalColumnOptions"
-            :key="opt.value"
-            :value="opt.value ?? ''"
-          >
-            {{ opt.label }}
-          </option>
-        </select>
+      <div class="flex max-w-full items-center gap-2">
+        <span class="w-12 shrink-0 text-xs text-muted">难度</span>
+        <USelect
+          :model-value="difficultyCol === null ? 'none' : String(difficultyCol)"
+          :items="optionalSelectItems"
+          size="sm"
+          class="min-w-0 max-w-full flex-1"
+          @update:model-value="updateDifficultyCol"
+        />
       </div>
 
       <!-- Smart inference hint -->
       <div
         v-if="typeCol === null"
-        class="text-[11px] leading-relaxed text-[var(--warn)] bg-[rgba(199,125,26,0.08)] rounded-lg px-2.5 py-1.5"
+        class="flex items-start gap-1.5 rounded-lg border border-warning/40 bg-warning/10 px-2.5 py-1.5 text-xs leading-relaxed text-warning"
       >
-        <AppIcon
-          :path="mdiAutoFix"
-          :size="12"
-          class="inline mr-1 align-middle"
-        />
+        <UIcon name="i-lucide-wand-sparkles" class="mt-0.5 size-3 shrink-0" />
         智能推断：含分隔符→多选，对/错→判断，其余→单选
       </div>
     </div>
 
     <!-- Auto Detect Button -->
     <div class="flex gap-3">
-      <AppButton
+      <UButton
         variant="ghost"
-        :icon-path="mdiAutoFix"
-        :icon-size="16"
+        color="neutral"
+        size="sm"
+        icon="i-lucide-wand-sparkles"
+        label="自动检测"
         @click="runAutoDetect"
-      >
-        自动检测
-      </AppButton>
+      />
     </div>
 
-    <!-- Data Preview Table -->
+    <!-- Data Preview Table（保留原生 table：列由 Excel 动态决定，且表头需按映射高亮） -->
     <div v-if="dataRows.length > 0" class="min-w-0">
       <div
-        class="flex items-center gap-1.5 text-xs font-medium mb-1.5 text-muted"
+        class="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted"
       >
-        <AppIcon :path="mdiTable" :size="14" />
+        <UIcon name="i-lucide-table" class="size-3.5" />
         前 {{ Math.min(5, dataRows.length) }} / {{ dataRows.length }} 行
       </div>
-      <div
-        class="overflow-x-auto rounded-xl border border-[color:var(--border)]"
-      >
-        <table class="text-xs min-w-[500px] w-full">
+      <div class="overflow-x-auto rounded-lg border border-default">
+        <table class="w-full min-w-[500px] text-xs">
           <thead>
-            <tr class="bg-surface-soft">
-              <th class="px-2 py-1.5 text-left font-medium text-muted w-8">
+            <tr class="bg-elevated">
+              <th class="w-8 px-2 py-1.5 text-left font-medium text-muted">
                 #
               </th>
               <th
                 v-for="(header, idx) in displayHeaders"
                 :key="idx"
-                class="px-2 py-1.5 text-left font-medium min-w-[80px]"
-                :class="{
-                  'text-brand':
-                    idx === stemCol ||
-                    idx === answerCol ||
-                    isOptionSelected(idx),
-                  'text-muted':
-                    idx !== stemCol &&
-                    idx !== answerCol &&
-                    !isOptionSelected(idx),
-                }"
+                class="min-w-[80px] px-2 py-1.5 text-left font-medium"
+                :class="
+                  idx === stemCol || idx === answerCol || isOptionSelected(idx)
+                    ? 'text-primary'
+                    : 'text-muted'
+                "
                 :title="header || `列 ${idx + 1}`"
               >
                 <span v-if="idx === stemCol" class="mr-0.5">📝</span>
                 <span
                   v-else-if="idx === answerCol"
-                  class="mr-0.5 text-brand font-bold"
+                  class="mr-0.5 font-bold text-primary"
                   >✓</span
                 >
                 <span
                   v-else-if="isOptionSelected(idx)"
-                  class="mr-0.5 text-brand"
+                  class="mr-0.5 text-primary"
                   >◯</span
                 >
                 {{ header || `列${idx + 1}` }}
@@ -394,8 +368,8 @@ runAutoDetect();
             <tr
               v-for="(row, rowIdx) in previewRows"
               :key="rowIdx"
-              class="border-t border-[color:var(--border)]"
-              :class="{ 'bg-[rgba(47,111,107,0.04)]': rowIdx % 2 === 0 }"
+              class="border-t border-default"
+              :class="{ 'bg-elevated/40': rowIdx % 2 === 0 }"
             >
               <td class="px-2 py-1.5 text-muted">{{ rowIdx + 1 }}</td>
               <td
@@ -403,8 +377,10 @@ runAutoDetect();
                   (_, idx) => row[idx] ?? '',
                 )"
                 :key="cellIdx"
-                class="px-2 py-1.5 leading-snug min-w-[80px]"
-                :class="{ 'font-medium': cellIdx === stemCol }"
+                class="min-w-[80px] px-2 py-1.5 leading-snug"
+                :class="
+                  cellIdx === stemCol ? 'font-medium text-highlighted' : ''
+                "
               >
                 {{ cell || '—' }}
               </td>
@@ -417,50 +393,59 @@ runAutoDetect();
     <!-- Empty State -->
     <div
       v-else
-      class="text-center py-8 text-sm text-muted bg-surface-soft rounded-xl border border-dashed border-[color:var(--border)]"
+      class="rounded-lg border border-dashed border-default bg-elevated py-8 text-center text-sm text-muted"
     >
       该工作表没有数据
     </div>
 
     <!-- Parse Button -->
-    <div class="flex gap-3 justify-center pt-2">
-      <AppButton :disabled="!sheetHasData || isParsing" @click="handleParse">
-        {{ isParsing ? '解析中…' : '解析并预览' }}
-      </AppButton>
+    <div class="flex justify-center gap-3 pt-2">
+      <UButton
+        :disabled="!sheetHasData || isParsing"
+        :loading="isParsing"
+        :label="isParsing ? '解析中…' : '解析并预览'"
+        @click="handleParse"
+      />
     </div>
 
     <!-- Parse Errors -->
-    <div
+    <UAlert
       v-if="parseErrors.length > 0"
-      class="p-4 rounded-xl border border-[rgba(185,74,60,0.4)] bg-[rgba(185,74,60,0.08)]"
+      color="error"
+      variant="soft"
+      title="解析问题"
     >
-      <div class="font-semibold text-sm mb-2">解析问题</div>
-      <ul class="text-xs text-muted">
-        <li v-for="(item, index) in parseErrors" :key="index">{{ item }}</li>
-      </ul>
-    </div>
+      <template #description>
+        <ul class="grid gap-1 text-xs">
+          <li v-for="(item, index) in parseErrors" :key="index">{{ item }}</li>
+        </ul>
+      </template>
+    </UAlert>
 
     <!-- Parse Result Preview -->
-    <div
+    <UCard
       v-if="parseResult"
-      class="p-4 rounded-xl border border-[rgba(47,133,90,0.3)] bg-[rgba(47,133,90,0.06)]"
+      class="border-success/30 bg-success/5"
+      :ui="{ body: 'p-4' }"
     >
-      <div class="font-semibold text-sm mb-2">解析结果</div>
-      <div class="grid gap-1 text-sm">
+      <p class="mb-2 text-sm font-semibold text-highlighted">解析结果</p>
+      <div class="grid gap-2 text-sm">
         <div>
           成功解析：
-          <span class="font-semibold text-brand"
-            >{{ parseResult.totalRows }} 题</span
-          >
+          <span class="font-semibold text-primary">
+            {{ parseResult.totalRows }} 题
+          </span>
         </div>
         <div
           v-if="Object.keys(parseResult.typeBreakdown).length"
-          class="flex flex-wrap gap-x-4 gap-y-1"
+          class="flex flex-wrap gap-1.5"
         >
-          <span
+          <UBadge
             v-for="(count, type) in parseResult.typeBreakdown"
             :key="type"
-            class="text-xs bg-surface-soft px-2 py-0.5 rounded-full"
+            color="neutral"
+            variant="soft"
+            size="md"
           >
             {{
               {
@@ -470,21 +455,32 @@ runAutoDetect();
                 indeterminate: '不定项',
               }[type] || type
             }}: {{ count }}
-          </span>
+          </UBadge>
         </div>
-        <div v-if="parseResult.unsupportedRows.length > 0" class="mt-2">
-          <details>
-            <summary class="text-xs text-[var(--warn)] cursor-pointer">
-              {{ parseResult.unsupportedRows.length }} 行跳过（点击查看详情）
-            </summary>
-            <ul class="mt-1 text-xs text-muted list-disc pl-4">
-              <li v-for="(msg, idx) in parseResult.unsupportedRows" :key="idx">
-                {{ msg }}
-              </li>
-            </ul>
-          </details>
+        <div v-if="parseResult.unsupportedRows.length > 0">
+          <UCollapsible>
+            <template #default="{ open }">
+              <UButton variant="link" color="warning" size="xs" class="px-0">
+                {{ parseResult.unsupportedRows.length }} 行跳过（点击查看详情）
+                <UIcon
+                  :name="open ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+                  class="size-3.5"
+                />
+              </UButton>
+            </template>
+            <template #content>
+              <ul class="mt-1 grid list-disc gap-0.5 pl-4 text-xs text-muted">
+                <li
+                  v-for="(msg, idx) in parseResult.unsupportedRows"
+                  :key="idx"
+                >
+                  {{ msg }}
+                </li>
+              </ul>
+            </template>
+          </UCollapsible>
         </div>
       </div>
-    </div>
+    </UCard>
   </div>
 </template>

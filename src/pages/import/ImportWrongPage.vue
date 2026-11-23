@@ -1,18 +1,12 @@
 <script setup lang="ts">
-import { mdiBookOpenOutline, mdiDownload } from '@mdi/js';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import AppButton from '../../components/ui/AppButton.vue';
-import AppCard from '../../components/ui/AppCard.vue';
-import AppIcon from '../../components/ui/AppIcon.vue';
-import { useBankStore } from '../../stores/bank';
 import type { QuestionItem, QuestionType } from '../../types/quiz';
 import { deduplicateQuestions } from '../../utils/dedup';
 import { evaluateStatus } from '../../utils/scoring';
 import { listPaperAttempts, listPapers, saveBank } from '../../utils/idb';
 
 const router = useRouter();
-const bankStore = useBankStore();
 
 const isLoading = ref(true);
 const wrongQuestions = ref<QuestionItem[]>([]);
@@ -76,64 +70,76 @@ async function importAsBank() {
 </script>
 
 <template>
-  <div class="max-w-[576px] mx-auto">
-    <AppCard class="max-sm:p-3">
-      <div class="flex items-center gap-2 mb-3">
-        <span
-          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-brand text-white text-[11px] font-bold shrink-0"
-          >2</span
-        >
-        <h2 class="text-base max-sm:text-sm">导入错题本</h2>
-      </div>
-
-      <div v-if="isLoading" class="text-muted text-sm py-8 text-center">
-        正在收集错题…
-      </div>
-
-      <template v-else>
-        <div v-if="wrongQuestions.length === 0" class="text-center py-8">
-          <div class="text-4xl mb-3 select-none">🎉</div>
-          <p class="text-muted text-sm mb-4">错题本为空，没有可导入的题目</p>
-          <AppButton variant="secondary" @click="router.push('/papers')">
-            去做题
-          </AppButton>
-        </div>
-
-        <div v-else>
-          <div
-            class="bg-surface-soft rounded-xl p-4 mb-4 grid gap-2 text-sm"
+  <div class="mx-auto w-full max-w-xl">
+    <UCard>
+      <template #header>
+        <div class="flex items-center gap-2">
+          <span
+            class="grid size-6 place-items-center rounded-full bg-primary text-xs font-semibold text-white"
           >
-            <div class="flex items-center justify-between">
-              <span class="text-muted">错题出现总次数</span>
-              <span class="font-semibold">{{ totalOccurrences }} 次</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-muted">去重后题目数</span>
-              <span class="font-semibold text-brand"
-                >{{ wrongQuestions.length }} 题</span
-              >
-            </div>
-            <div class="border-t border-[color:var(--border)] pt-2 mt-1 grid gap-1">
-              <div
-                v-for="[type, count] in typeStats"
-                :key="type"
-                class="flex items-center justify-between text-xs"
-              >
-                <span class="text-muted">{{ typeLabels[type] }}</span>
-                <span>{{ count }} 题</span>
-              </div>
-            </div>
-          </div>
-
-          <AppButton
-            :icon-path="mdiDownload"
-            :icon-size="18"
-            @click="importAsBank"
-          >
-            导入为题库
-          </AppButton>
+            2
+          </span>
+          <h2 class="text-sm font-semibold text-highlighted">导入错题本</h2>
         </div>
       </template>
-    </AppCard>
+
+      <div v-if="isLoading" class="space-y-3">
+        <USkeleton class="h-24 w-full rounded-lg" />
+        <USkeleton class="h-9 w-full rounded-lg" />
+      </div>
+
+      <UEmpty
+        v-else-if="wrongQuestions.length === 0"
+        icon="i-lucide-party-popper"
+        title="错题本为空"
+        description="没有可导入的题目，先去做几套题吧。"
+        variant="naked"
+        class="py-8"
+      >
+        <template #actions>
+          <UButton
+            color="neutral"
+            variant="outline"
+            label="去做题"
+            @click="router.push('/papers')"
+          />
+        </template>
+      </UEmpty>
+
+      <div v-else class="space-y-4">
+        <div class="space-y-2 rounded-lg bg-elevated p-4 text-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-muted">错题出现总次数</span>
+            <span class="font-semibold text-highlighted">
+              {{ totalOccurrences }} 次
+            </span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-muted">去重后题目数</span>
+            <span class="font-semibold text-primary">
+              {{ wrongQuestions.length }} 题
+            </span>
+          </div>
+          <div class="grid gap-1 border-t border-default pt-2">
+            <div
+              v-for="[type, count] in typeStats"
+              :key="type"
+              class="flex items-center justify-between text-xs"
+            >
+              <span class="text-muted">{{ typeLabels[type] }}</span>
+              <span class="text-default">{{ count }} 题</span>
+            </div>
+          </div>
+        </div>
+
+        <UButton
+          block
+          size="lg"
+          icon="i-lucide-download"
+          label="导入为题库"
+          @click="importAsBank"
+        />
+      </div>
+    </UCard>
   </div>
 </template>

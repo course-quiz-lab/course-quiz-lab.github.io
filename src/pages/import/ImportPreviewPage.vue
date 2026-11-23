@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { mdiCheckCircleOutline } from '@mdi/js';
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import AppButton from '../../components/ui/AppButton.vue';
-import AppCard from '../../components/ui/AppCard.vue';
 import { useImportStore } from '../../stores/import';
 import type { QuestionItem } from '../../types/quiz';
+import { formatAnswerText } from '../../utils/answer';
 
 const router = useRouter();
 const importStore = useImportStore();
@@ -39,14 +37,16 @@ const sampleQuestions = computed(() => {
   return samples;
 });
 
-function typePillClass(type: string): string {
-  const map: Record<string, string> = {
-    single: 'bg-[rgba(47,111,107,0.12)] text-[var(--brand)]',
-    multiple: 'bg-[rgba(226,181,109,0.2)] text-[var(--accent)]',
-    judge: 'bg-[rgba(47,133,90,0.12)] text-[var(--ok)]',
-    indeterminate: 'bg-[rgba(185,74,60,0.1)] text-[var(--danger)]',
+function typePillColor(
+  type: string,
+): 'primary' | 'warning' | 'success' | 'error' | 'neutral' {
+  const map: Record<string, 'primary' | 'warning' | 'success' | 'error'> = {
+    single: 'primary',
+    multiple: 'warning',
+    judge: 'success',
+    indeterminate: 'error',
   };
-  return map[type] || 'bg-surface-soft text-muted';
+  return map[type] || 'neutral';
 }
 
 async function confirmImport() {
@@ -56,111 +56,136 @@ async function confirmImport() {
 </script>
 
 <template>
-  <div class="max-w-[576px] mx-auto">
-    <template v-if="importStore.preview">
-      <AppCard class="max-sm:p-3">
-        <div class="flex items-center gap-2 mb-3">
+  <div class="mx-auto w-full max-w-xl">
+    <UCard v-if="importStore.preview">
+      <template #header>
+        <div class="flex items-center gap-2">
           <span
-            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-brand text-white text-[11px] font-bold shrink-0"
-            >3</span
+            class="grid size-6 place-items-center rounded-full bg-primary text-xs font-semibold text-white"
           >
-          <h2 class="text-base max-sm:text-sm">确认题库</h2>
+            3
+          </span>
+          <h2 class="text-sm font-semibold text-highlighted">确认题库</h2>
         </div>
+      </template>
 
-        <!-- Warning -->
-        <div
+      <div class="space-y-4">
+        <UAlert
           v-if="importStore.warning"
-          class="mb-3 p-3 rounded-xl border border-[rgba(199,125,26,0.4)] bg-[rgba(199,125,26,0.08)] text-xs"
-        >
-          <span class="font-semibold">提醒：</span>{{ importStore.warning }}
-        </div>
+          color="warning"
+          variant="soft"
+          icon="i-lucide-triangle-alert"
+          title="提醒"
+          :description="importStore.warning"
+        />
 
         <!-- Preview card -->
-        <div
-          class="p-4 rounded-xl border border-[rgba(47,133,90,0.3)] bg-[rgba(47,133,90,0.06)] grid gap-1.5"
-        >
-          <div class="text-base font-medium">
+        <div class="rounded-lg border border-default bg-elevated p-4">
+          <p class="text-base font-medium text-highlighted">
             {{ importStore.preview.meta.name }}
-          </div>
-          <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted">
-            <code>{{ importStore.preview.meta.course }}</code>
-            <span>{{ importStore.preview.meta.author || '未标注' }}</span>
+          </p>
+          <div
+            class="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted"
+          >
+            <UBadge color="neutral" variant="soft" size="md">
+              {{ importStore.preview.meta.course }}
+            </UBadge>
+            <span>{{ importStore.preview.meta.author || '未标注作者' }}</span>
+            <span class="text-dimmed">·</span>
             <span>{{ importStore.preview.questions.length }} 题</span>
-            <span v-if="importStore.preview.meta.source">{{
-              importStore.preview.meta.source
-            }}</span>
+            <template v-if="importStore.preview.meta.source">
+              <span class="text-dimmed">·</span>
+              <span class="truncate">{{
+                importStore.preview.meta.source
+              }}</span>
+            </template>
           </div>
         </div>
 
         <!-- Type Breakdown -->
-        <div
-          v-if="importStore.selectedMethod === 'xlsx'"
-          class="mt-3 p-3 rounded-xl border border-[color:var(--border)] bg-surface-soft"
-        >
-          <div class="text-xs font-medium mb-1.5 text-muted">题型分布</div>
+        <div v-if="importStore.selectedMethod === 'xlsx'">
+          <p class="mb-2 text-xs font-medium text-muted">题型分布</p>
           <div class="flex flex-wrap gap-1.5">
-            <span
+            <UBadge
               v-for="(count, type) in typeBreakdown"
               :key="type"
-              class="text-[11px] bg-surface px-2 py-0.5 rounded-full"
+              :color="typePillColor(String(type))"
+              variant="soft"
+              size="md"
             >
               {{ typeLabels[type as keyof typeof typeLabels] || type }}:
               {{ count }}
-            </span>
+            </UBadge>
           </div>
         </div>
 
         <!-- Unsupported rows info -->
         <div
           v-if="importStore.unsupportedRows.length > 0"
-          class="mt-3 p-3 rounded-xl border border-[rgba(199,125,26,0.4)] bg-[rgba(199,125,26,0.08)] text-xs"
+          class="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs"
         >
-          <details>
-            <summary class="cursor-pointer font-medium text-[var(--warn)]">
-              {{ importStore.unsupportedRows.length }} 行已跳过
-            </summary>
-            <ul class="mt-1.5 text-xs text-muted list-disc pl-4 grid gap-0.5">
-              <li v-for="(msg, idx) in importStore.unsupportedRows" :key="idx">
-                {{ msg }}
-              </li>
-            </ul>
-          </details>
+          <UCollapsible>
+            <template #default="{ open }">
+              <UButton variant="link" color="warning" size="xs" class="px-0">
+                {{ importStore.unsupportedRows.length }} 行已跳过
+                <UIcon
+                  :name="open ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+                  class="size-3.5"
+                />
+              </UButton>
+            </template>
+            <template #content>
+              <ul class="mt-2 grid list-disc gap-1 pl-4 text-xs text-muted">
+                <li
+                  v-for="(msg, idx) in importStore.unsupportedRows"
+                  :key="idx"
+                >
+                  {{ msg }}
+                </li>
+              </ul>
+            </template>
+          </UCollapsible>
         </div>
 
         <!-- Sample Questions per Type -->
-        <div v-if="sampleQuestions.length > 0" class="mt-4">
-          <div class="text-xs font-medium text-muted mb-2">
+        <div v-if="sampleQuestions.length > 0">
+          <p class="mb-2 text-xs font-medium text-muted">
             样题预览（每种题型展示第 1 题）
-          </div>
+          </p>
           <div class="grid gap-2">
             <div
               v-for="sq in sampleQuestions"
               :key="sq.id"
-              class="p-3 rounded-xl border border-[color:var(--border)] bg-surface-soft grid gap-1.5"
+              class="rounded-lg border border-default p-3"
             >
               <div class="flex items-start gap-2">
-                <span
-                  class="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full leading-none mt-0.5"
-                  :class="typePillClass(sq.type)"
+                <UBadge
+                  :color="typePillColor(sq.type)"
+                  variant="soft"
+                  size="md"
+                  class="mt-0.5 shrink-0"
                 >
                   {{ typeLabels[sq.type] || sq.type }}
+                </UBadge>
+                <span
+                  class="line-clamp-3 min-w-0 text-xs leading-relaxed text-default"
+                >
+                  {{ sq.stem }}
                 </span>
-                <span class="text-xs leading-relaxed min-w-0 line-clamp-3">{{
-                  sq.stem
-                }}</span>
               </div>
-              <div v-if="sq.options.length > 0" class="grid gap-0.5 pl-1">
+
+              <div v-if="sq.options.length > 0" class="mt-2 grid gap-1 pl-1">
                 <div
                   v-for="opt in sq.options"
                   :key="opt.id"
-                  class="flex items-center gap-1.5 text-[11px] text-muted"
+                  class="flex items-center gap-1.5 text-xs text-muted"
                 >
                   <span
-                    class="inline-flex items-center justify-center w-3.5 h-3.5 rounded text-[9px] font-medium shrink-0"
+                    class="grid size-4 shrink-0 place-items-center rounded text-xs font-medium"
                     :class="
                       sq.answer.includes(opt.id)
-                        ? 'bg-brand text-white'
-                        : 'bg-surface text-muted'
+                        ? 'bg-primary text-inverted'
+                        : 'bg-elevated text-default'
                     "
                   >
                     {{ opt.id }}
@@ -168,35 +193,46 @@ async function confirmImport() {
                   <span class="truncate">{{ opt.text }}</span>
                 </div>
               </div>
-              <div class="text-[11px] text-muted">
+
+              <p class="mt-2 text-xs text-muted">
                 答案：
-                <span class="text-brand font-medium">
-                  {{ sq.answer.join('、') }}
+                <span class="font-medium text-primary">
+                  {{ formatAnswerText(sq, sq.answer, '、') }}
                 </span>
-              </div>
+              </p>
             </div>
           </div>
         </div>
 
-        <div class="mt-6 flex flex-wrap gap-3 justify-center">
-          <AppButton
-            :disabled="!importStore.preview"
-            :icon-path="mdiCheckCircleOutline"
-            :icon-size="18"
-            @click="confirmImport"
-            class="max-sm:text-[13px] max-sm:px-3 max-sm:py-2"
-          >
-            导入并使用
-          </AppButton>
-        </div>
-      </AppCard>
-    </template>
+        <UButton
+          block
+          size="lg"
+          icon="i-lucide-circle-check"
+          label="导入并使用"
+          :disabled="!importStore.preview"
+          @click="confirmImport"
+        />
+      </div>
+    </UCard>
 
     <!-- Fallback if no preview data -->
-    <AppCard v-else class="max-sm:p-3">
-      <p class="text-sm text-muted text-center py-4">
-        没有可预览的数据，请先导入题库。
-      </p>
-    </AppCard>
+    <UCard v-else>
+      <UEmpty
+        icon="i-lucide-file-question"
+        title="没有可预览的数据"
+        description="请先导入题库文件。"
+        variant="naked"
+        class="py-10"
+      >
+        <template #actions>
+          <UButton
+            to="/import/select"
+            color="neutral"
+            variant="outline"
+            label="返回选择导入方式"
+          />
+        </template>
+      </UEmpty>
+    </UCard>
   </div>
 </template>

@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import { mdiLinkVariant } from '@mdi/js';
 import { useRouter } from 'vue-router';
-import AppButton from '../../components/ui/AppButton.vue';
-import AppCard from '../../components/ui/AppCard.vue';
-import AppIcon from '../../components/ui/AppIcon.vue';
 import { useImportStore } from '../../stores/import';
 import { validateBankSchema } from '../../utils/validation';
 
@@ -40,55 +36,71 @@ async function importFromUrl() {
 </script>
 
 <template>
-  <div class="max-w-[576px] mx-auto">
-    <AppCard class="!p-4 sm:!p-5 overflow-hidden">
-      <div class="flex items-center gap-2 mb-3">
-        <span
-          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-brand text-white text-[11px] font-bold shrink-0"
-          >2</span
-        >
-        <h2 class="text-base max-sm:text-sm">链接导入</h2>
-      </div>
+  <div class="mx-auto w-full max-w-xl">
+    <UCard>
+      <template #header>
+        <div class="flex items-center gap-2">
+          <span
+            class="grid size-6 place-items-center rounded-full bg-primary text-xs font-semibold text-white"
+          >
+            2
+          </span>
+          <h2 class="text-sm font-semibold text-highlighted">链接导入</h2>
+        </div>
+      </template>
 
-      <div
-        class="p-4 rounded-xl border border-[color:var(--border)] bg-surface-soft"
-      >
-        <div class="flex flex-col items-center gap-2 text-center">
-          <AppIcon :path="mdiLinkVariant" :size="28" class="text-muted" />
-          <div>
-            <p class="text-sm font-medium">粘贴题库链接</p>
-            <p class="text-xs text-muted mt-0.5">
-              链接需可直接访问 JSON 文件，支持 CORS
+      <div class="space-y-4">
+        <div class="flex items-start gap-3 rounded-lg bg-elevated p-4">
+          <UIcon
+            name="i-lucide-link"
+            class="mt-0.5 size-5 shrink-0 text-primary"
+          />
+          <div class="text-sm">
+            <p class="font-medium text-highlighted">粘贴题库链接</p>
+            <p class="mt-0.5 text-xs text-muted">
+              链接需可直接访问 JSON 文件，并允许跨域（CORS）访问。
             </p>
           </div>
-          <input
+        </div>
+
+        <UFormField label="题库链接">
+          <UInput
             v-model="importStore.importUrl"
             type="url"
+            size="lg"
+            icon="i-lucide-globe"
             placeholder="https://example.com/questions.json"
-            class="w-full max-w-full px-3 py-1.5 rounded-lg border border-[color:var(--border)] bg-surface text-xs"
+            class="w-full"
+            @keydown.enter="importFromUrl"
           />
-          <AppButton
-            :disabled="!importStore.importUrl.trim() || importStore.isLoading"
-            @click="importFromUrl"
-            class="max-sm:text-[13px] max-sm:px-3 max-sm:py-2"
-          >
-            {{ importStore.isLoading ? '解析中…' : '解析链接' }}
-          </AppButton>
-        </div>
+        </UFormField>
+
+        <UButton
+          block
+          size="lg"
+          icon="i-lucide-download"
+          :loading="importStore.isLoading"
+          :disabled="!importStore.importUrl.trim() || importStore.isLoading"
+          :label="importStore.isLoading ? '解析中…' : '解析链接'"
+          @click="importFromUrl"
+        />
       </div>
 
-      <!-- Errors -->
-      <div
+      <UAlert
         v-if="importStore.errors.length"
-        class="mt-3 p-3 rounded-xl border border-[rgba(185,74,60,0.4)] bg-[rgba(185,74,60,0.08)]"
+        color="error"
+        variant="soft"
+        class="mt-4"
+        title="校验失败"
       >
-        <div class="font-semibold text-xs mb-1">校验失败</div>
-        <ul class="text-xs text-muted grid gap-0.5">
-          <li v-for="(item, index) in importStore.errors" :key="index">
-            {{ item }}
-          </li>
-        </ul>
-      </div>
-    </AppCard>
+        <template #description>
+          <ul class="grid gap-1 text-xs">
+            <li v-for="(item, index) in importStore.errors" :key="index">
+              {{ item }}
+            </li>
+          </ul>
+        </template>
+      </UAlert>
+    </UCard>
   </div>
 </template>

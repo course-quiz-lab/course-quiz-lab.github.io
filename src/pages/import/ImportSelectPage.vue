@@ -1,15 +1,5 @@
 <script setup lang="ts">
-import {
-  mdiBookOpenOutline,
-  mdiCloudOutline,
-  mdiFileDocumentOutline,
-  mdiLinkVariant,
-  mdiMicrosoftExcel,
-  mdiMicrosoftWord,
-} from '@mdi/js';
 import { useRouter } from 'vue-router';
-import AppCard from '../../components/ui/AppCard.vue';
-import AppIcon from '../../components/ui/AppIcon.vue';
 import { useImportStore } from '../../stores/import';
 import type { ImportMethod } from '../../types/quiz';
 
@@ -25,42 +15,42 @@ const methods: MethodItem[] = [
   {
     id: 'upload',
     label: '上传 JSON',
-    icon: mdiFileDocumentOutline,
+    icon: 'i-lucide-file-text',
     disabled: false,
     description: '从本地选择 JSON 格式的题库文件',
   },
   {
     id: 'cloud',
     label: '云端题库',
-    icon: mdiCloudOutline,
+    icon: 'i-lucide-cloud',
     disabled: false,
     description: '从云端拉取题库索引并下载导入',
   },
   {
     id: 'link',
     label: '链接导入',
-    icon: mdiLinkVariant,
+    icon: 'i-lucide-link',
     disabled: false,
     description: '通过可公开访问的链接导入 JSON 题库',
   },
   {
     id: 'wrongbook',
     label: '导入错题',
-    icon: mdiBookOpenOutline,
+    icon: 'i-lucide-book-open',
     disabled: false,
     description: '将错题本中的题目导入为新的题库',
   },
   {
     id: 'xlsx',
     label: '导入 XLSX',
-    icon: mdiMicrosoftExcel,
+    icon: 'i-lucide-file-spreadsheet',
     disabled: false,
     description: '从本地选择 Excel 格式的题库文件',
   },
   {
     id: 'word',
     label: '导入 Word',
-    icon: mdiMicrosoftWord,
+    icon: 'i-lucide-file-type',
     disabled: true,
     description: '预留：后续支持解析 Word 题库',
   },
@@ -90,46 +80,46 @@ function handleSelect(method: ImportMethod) {
 </script>
 
 <template>
-  <div class="max-w-[576px] mx-auto">
-    <AppCard class="max-sm:p-3">
-      <div class="flex items-center gap-2 mb-3">
-        <span
-          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-brand text-white text-[11px] font-bold shrink-0"
-          >1</span
-        >
-        <h2 class="text-base max-sm:text-sm">选择导入方式</h2>
-      </div>
-      <div class="grid gap-2">
-        <button
-          v-for="method in methods"
-          :key="method.id"
-          class="min-w-0 flex items-center gap-2.5 p-2.5 rounded-xl border border-[color:var(--border)] bg-surface-soft text-left cursor-pointer transition-all duration-150 hover:border-brand disabled:opacity-40 disabled:cursor-not-allowed"
-          :disabled="method.disabled"
-          @click="!method.disabled && handleSelect(method.id)"
-        >
-          <span
-            class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-surface"
+  <div class="space-y-4">
+    <div class="flex items-center gap-2 text-sm font-medium text-highlighted">
+      选择导入方式
+      <UBadge color="neutral" variant="soft" size="md">第 1 步</UBadge>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <UPageCard
+        v-for="method in methods"
+        :key="method.id"
+        :icon="method.icon"
+        :title="method.label"
+        :description="method.description"
+        variant="outline"
+        :on-click="method.disabled ? undefined : () => handleSelect(method.id)"
+        :ui="{
+          root: method.disabled
+            ? 'cursor-not-allowed opacity-50'
+            : 'cursor-pointer transition duration-200 hover:-translate-y-0.5 hover:border-primary/40',
+          leadingIcon: 'size-6 text-primary',
+        }"
+      >
+        <template #footer>
+          <UBadge
+            v-if="method.disabled"
+            color="neutral"
+            variant="soft"
+            size="md"
           >
-            <AppIcon :path="method.icon" :size="18" />
+            即将支持
+          </UBadge>
+          <span
+            v-else
+            class="inline-flex items-center gap-1 text-xs font-medium text-primary"
+          >
+            选择
+            <UIcon name="i-lucide-arrow-right" class="size-3.5" />
           </span>
-          <span class="flex-1 min-w-0">
-            <span class="font-medium text-sm flex items-center gap-1">
-              <span>
-                {{ method.label }}
-              </span>
-              <span
-                v-if="method.disabled"
-                class="inline-block text-xs text-muted bg-surface-soft px-2 max-sm:px-1.5 rounded-full ml-1 leading-none whitespace-nowrap"
-              >
-                即将支持
-              </span>
-            </span>
-            <span class="block text-xs text-muted mt-0.5 truncate">
-              {{ method.description }}
-            </span>
-          </span>
-        </button>
-      </div>
-    </AppCard>
+        </template>
+      </UPageCard>
+    </div>
   </div>
 </template>

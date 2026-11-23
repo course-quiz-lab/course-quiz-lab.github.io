@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import StatusPill from './StatusPill.vue';
-import AppCard from './ui/AppCard.vue';
 import type { QuestionItem } from '../types/bank';
 import type { QuestionType } from '../types/core';
+import { formatAnswerText } from '../utils/answer';
 
-const props = defineProps<{
+defineProps<{
   question: QuestionItem;
   status: string;
   paperTitle?: string;
@@ -25,25 +25,17 @@ function typeLabel(type: QuestionType) {
 }
 
 function formatAnswer(question: QuestionItem) {
-  if (question.type === 'judge') {
-    return question.answer
-      .map((id) => (id === 'T' ? '正确' : '错误'))
-      .join(' / ');
-  }
-  return question.answer.join(' / ');
+  return formatAnswerText(question);
 }
 
 function userSelectedFormat(question: QuestionItem, selected: string[]) {
   if (selected.length === 0) return '未作答';
-  if (question.type === 'judge') {
-    return selected.map((id) => (id === 'T' ? '正确' : '错误')).join(' / ');
-  }
-  return selected.join(' / ');
+  return formatAnswerText(question, selected);
 }
 </script>
 
 <template>
-  <AppCard>
+  <UCard :ui="{ body: 'p-5' }">
     <div
       v-if="
         paperTitle ||
@@ -51,72 +43,71 @@ function userSelectedFormat(question: QuestionItem, selected: string[]) {
         attemptDate ||
         attemptMode
       "
-      class="flex items-center gap-2 text-[11px] text-muted mb-3 flex-wrap"
+      class="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted"
     >
-      <span
-        v-if="paperTitle"
-        class="px-2 py-0.5 rounded border border-[color:var(--border)] bg-surface-soft"
-      >
+      <UBadge v-if="paperTitle" color="neutral" variant="outline" size="md">
         {{ paperTitle }}
-      </span>
-      <span
+      </UBadge>
+      <UBadge
         v-if="wrongCount && wrongCount > 1"
-        class="px-2 py-0.5 rounded-full bg-danger/10 text-danger text-[10px] font-medium"
+        color="error"
+        variant="soft"
+        size="md"
       >
         错 {{ wrongCount }} 次
-      </span>
+      </UBadge>
       <template v-if="attemptDate">
-        <span>·</span>
+        <span class="text-dimmed">·</span>
         <span>{{ new Date(attemptDate).toLocaleDateString('zh-CN') }}</span>
       </template>
       <template v-if="attemptMode">
-        <span>·</span>
+        <span class="text-dimmed">·</span>
         <span>{{ attemptMode === 'exam' ? '考试' : '练习' }}</span>
       </template>
     </div>
 
-    <div class="mb-3 text-base font-medium">
+    <p class="mb-3 text-base font-medium leading-relaxed text-highlighted">
       {{ question.stem }}
-    </div>
+    </p>
 
     <div
       v-if="question.options.length > 0"
-      class="mb-3 pl-4 border-l-2 border-[color:var(--border)]"
+      class="mb-3 space-y-1 border-l-2 border-default pl-3"
     >
       <div
         v-for="opt in question.options"
         :key="opt.id"
-        class="text-sm py-1 px-2 -mx-2 rounded"
+        class="rounded px-2 py-1 text-sm"
         :class="
-          question.answer.includes(opt.id) ? 'bg-[rgba(47,133,90,0.1)]' : ''
+          question.answer.includes(opt.id)
+            ? 'bg-success/10 text-success'
+            : 'text-default'
         "
       >
-        <span class="font-medium mr-2">{{ opt.id }}.</span>
-        <span class="text-foreground">{{ opt.text }}</span>
+        <span class="mr-2 font-medium">{{ opt.id }}.</span>
+        <span>{{ opt.text }}</span>
       </div>
     </div>
 
     <div class="flex flex-wrap items-center gap-2">
       <StatusPill :status="status as any" />
-      <span class="bg-surface-chip rounded-full px-2.5 py-1 text-xs text-muted">
+      <UBadge color="neutral" variant="soft" size="md">
         {{ typeLabel(question.type) }}
-      </span>
-      <span class="bg-surface-chip rounded-full px-2.5 py-1 text-xs text-muted">
+      </UBadge>
+      <UBadge color="neutral" variant="soft" size="md">
         您的作答：{{ userSelectedFormat(question, selectedAnswer) }}
-      </span>
-      <span
-        class="bg-[rgba(47,133,90,0.14)] text-ok rounded-full px-2.5 py-1 text-xs border border-brand/20 bg-brand/5 text-brand"
-      >
+      </UBadge>
+      <UBadge color="primary" variant="soft" size="md">
         参考答案：{{ formatAnswer(question) }}
-      </span>
+      </UBadge>
     </div>
 
     <div
       v-if="question.analysis"
-      class="mt-3 pt-3 border-t border-[color:var(--border)] text-sm text-muted"
+      class="mt-3 border-t border-default pt-3 text-sm text-muted"
     >
-      <span class="font-medium text-foreground block mb-1">解析：</span>
+      <span class="mb-1 block font-medium text-highlighted">解析</span>
       {{ question.analysis }}
     </div>
-  </AppCard>
+  </UCard>
 </template>

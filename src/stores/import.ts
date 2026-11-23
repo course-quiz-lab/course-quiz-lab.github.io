@@ -5,7 +5,8 @@ import type { ExcelParseResult } from '../types/excel';
 import { clearAttempt, loadAttempt } from '../utils/idb';
 import { useBankStore } from './bank';
 
-export type DownloadStatus = 'pending' | 'downloading' | 'success' | 'fail' | 'cancelled';
+export type DownloadStatus =
+  'pending' | 'downloading' | 'success' | 'fail' | 'cancelled';
 
 export interface DownloadQueueItem {
   entry: CloudBankEntry;
@@ -18,6 +19,8 @@ interface PaperCreateDraft {
   bankWeights: Record<string, number>;
   loadedBankIds: string[];
   targetCounts: Record<QuestionType, number>;
+  /** 用户自定义的题型顺序（四项全排列） */
+  typeOrder?: QuestionType[];
   shuffleQuestions: boolean;
   shuffleOptions: boolean;
   selectedMode: Mode;

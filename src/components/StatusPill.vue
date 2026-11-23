@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { mdiCheck, mdiClose } from '@mdi/js';
-import AppIcon from './ui/AppIcon.vue';
 
 const props = defineProps<{
   status: 'correct' | 'partial' | 'wrong' | 'unanswered' | 'answered';
@@ -16,33 +14,37 @@ const labelMap: Record<string, string> = {
 };
 
 const iconMap: Record<string, string> = {
-  correct: mdiCheck,
-  partial: mdiCheck,
-  wrong: mdiClose,
+  correct: 'i-lucide-check',
+  partial: 'i-lucide-minus',
+  wrong: 'i-lucide-x',
+};
+
+const colorMap: Record<
+  string,
+  'success' | 'warning' | 'error' | 'primary' | 'neutral'
+> = {
+  correct: 'success',
+  partial: 'warning',
+  wrong: 'error',
+  answered: 'primary',
+  unanswered: 'neutral',
 };
 
 const showIcon = computed(() =>
   ['correct', 'partial', 'wrong'].includes(props.status),
 );
 const showPill = computed(() => props.status !== 'unanswered');
-
-const statusClass = computed(() => {
-  const base =
-    'px-3 py-1.5 rounded-full text-xs inline-flex items-center justify-center';
-  const map: Record<string, string> = {
-    correct: 'bg-[rgba(47,133,90,0.14)] text-ok',
-    partial: 'bg-[rgba(226,181,109,0.2)] text-warn',
-    wrong: 'bg-[rgba(185,74,60,0.15)] text-danger',
-    unanswered: 'bg-[#f5f1ea] text-muted',
-    answered: 'bg-[rgba(47,111,107,0.12)] text-brand-strong',
-  };
-  return `${base} ${map[props.status]}`;
-});
 </script>
 
 <template>
-  <span v-if="showPill" :class="statusClass" :title="labelMap[props.status]">
-    <AppIcon v-if="showIcon" :path="iconMap[props.status]" :size="16" />
-    <span class="ml-2">{{ labelMap[props.status] }}</span>
-  </span>
+  <UBadge
+    v-if="showPill"
+    :color="colorMap[props.status] ?? 'neutral'"
+    variant="soft"
+    size="md"
+    :icon="showIcon ? iconMap[props.status] : undefined"
+    :title="labelMap[props.status]"
+  >
+    {{ labelMap[props.status] }}
+  </UBadge>
 </template>

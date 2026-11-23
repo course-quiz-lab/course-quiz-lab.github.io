@@ -1,16 +1,6 @@
 <script setup lang="ts">
-import {
-  mdiAlertCircleOutline,
-  mdiHistory,
-  mdiPlay,
-  mdiPlus,
-  mdiTrashCanOutline,
-} from '@mdi/js';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import AppButton from '../components/ui/AppButton.vue';
-import AppCard from '../components/ui/AppCard.vue';
-import AppIcon from '../components/ui/AppIcon.vue';
 import PageLayout from '../components/ui/PageLayout.vue';
 import { useAttemptStore } from '../stores/attempt';
 import { usePaperStore } from '../stores/paper';
@@ -103,9 +93,7 @@ async function resumeOrReviewAttempt(attempt: PaperAttempt) {
 }
 
 function viewWrongQuestions(attempt: PaperAttempt) {
-  router.push(
-    `/wrong-review/${attempt.paperId}/attempt/${attempt.id}`,
-  );
+  router.push(`/wrong-review/${attempt.paperId}/attempt/${attempt.id}`);
 }
 
 async function removePaper(id: string) {
@@ -131,230 +119,240 @@ async function deleteAttempt(attemptId: string) {
 </script>
 
 <template>
-  <PageLayout title="试卷管理">
-    <div v-if="isLoading" class="text-muted text-sm">加载中…</div>
+  <PageLayout
+    title="试卷管理"
+    description="选择一份试卷开始练习，或创建新的试卷。"
+  >
+    <template #header-actions>
+      <UButton
+        icon="i-lucide-plus"
+        label="新建试卷"
+        size="sm"
+        @click="goToCreatePaper"
+      />
+    </template>
 
-    <div v-else class="grid grid-cols-[360px_1fr] gap-6 max-lg:grid-cols-1">
-      <div
-        class="bg-surface rounded-2xl border border-[color:var(--border)] overflow-hidden max-h-[600px] max-sm:max-h-[280px] flex flex-col"
-      >
-        <div
-          class="p-4 border-b border-[color:var(--border)] flex items-center justify-between"
-        >
-          <span class="text-sm font-medium text-muted">
-            我的试卷（{{ papers.length }}）
+    <div v-if="isLoading" class="text-sm text-muted">加载中…</div>
+
+    <UEmpty
+      v-else-if="papers.length === 0"
+      icon="i-lucide-file-text"
+      title="还没有试卷"
+      description="先导入题库，再按题型与数量生成试卷。"
+      variant="naked"
+      class="rounded-xl border border-dashed border-default py-16"
+    >
+      <template #actions>
+        <UButton to="/import" icon="i-lucide-download" label="导入题库" />
+        <UButton
+          to="/papers/create"
+          color="neutral"
+          variant="outline"
+          icon="i-lucide-plus"
+          label="直接创建"
+        />
+      </template>
+    </UEmpty>
+
+    <div v-else class="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <UCard :ui="{ body: 'p-2' }" class="h-fit lg:sticky lg:top-24">
+        <div class="flex items-center justify-between px-2 pb-2 pt-1">
+          <span class="text-xs font-medium uppercase tracking-wide text-muted">
+            我的试卷 · {{ papers.length }}
           </span>
-          <AppButton
-            variant="inline"
-            :icon-path="mdiPlus"
-            :icon-size="16"
-            @click="goToCreatePaper"
-          >
-            新建试卷
-          </AppButton>
         </div>
-        <div
-          class="flex-1 overflow-y-auto divide-y divide-[color:var(--border)]"
-        >
-          <div
-            v-if="papers.length === 0"
-            class="p-6 text-center text-muted text-sm h-full flex items-center justify-center"
-          >
-            暂无试卷
-          </div>
+
+        <div class="max-h-[560px] space-y-1 overflow-y-auto">
           <button
             v-for="paper in papers"
             :key="paper.id"
-            class="w-full text-left p-4 max-sm:p-3 cursor-pointer border-none bg-transparent transition-colors duration-150 hover:bg-surface-soft"
-            :class="{
-              '!bg-[rgba(47,133,90,0.08)]': selectedPaperId === paper.id,
-            }"
+            type="button"
+            class="w-full cursor-pointer rounded-lg border px-3 py-2.5 text-left transition-colors duration-150"
+            :class="
+              selectedPaperId === paper.id
+                ? 'border-primary/30 bg-primary/10'
+                : 'border-transparent hover:bg-elevated'
+            "
             @click="selectedPaperId = paper.id"
           >
-            <div class="font-medium text-sm">{{ paper.title }}</div>
-            <div class="block text-[11px] text-muted/70 mt-0.5">
-              {{ paper.questions.length }} 题 · 生成于
+            <span class="block truncate text-sm font-medium text-highlighted">
+              {{ paper.title }}
+            </span>
+            <span class="mt-0.5 block text-xs text-muted">
+              {{ paper.questions.length }} 题 ·
               {{ new Date(paper.createdAt).toLocaleDateString('zh-CN') }}
-            </div>
+            </span>
           </button>
         </div>
-      </div>
+      </UCard>
 
-      <div
-        v-if="!selectedPaper"
-        class="flex items-center justify-center h-[400px] bg-surface rounded-2xl border border-[color:var(--border)] text-muted text-sm"
-      >
-        请选择一个试卷……
-      </div>
-
-      <div v-else class="flex flex-col gap-5 min-w-0 pb-[100px]">
-        <AppCard class="max-sm:p-4">
-          <div class="flex justify-between items-start mb-5">
-            <div>
-              <div class="text-[22px] max-sm:text-lg mb-1">
+      <div v-if="selectedPaper" class="min-w-0 space-y-6">
+        <UCard>
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <h2 class="truncate text-xl font-semibold text-highlighted">
                 {{ selectedPaper.title }}
-              </div>
-              <span class="text-sm text-muted">
+              </h2>
+              <p class="mt-1 text-sm text-muted">
                 生成于
                 {{ new Date(selectedPaper.createdAt).toLocaleString('zh-CN') }}
-              </span>
+              </p>
             </div>
-            <button
-              class="text-danger flex items-center p-2 rounded hover:bg-danger/10 transition-colors cursor-pointer border-none bg-transparent"
-              @click="removePaper(selectedPaper.id)"
-              title="删除试卷"
-            >
-              <AppIcon :path="mdiTrashCanOutline" :size="20" />
-            </button>
+            <UTooltip text="删除试卷">
+              <UButton
+                color="error"
+                variant="ghost"
+                icon="i-lucide-trash"
+                square
+                aria-label="删除试卷"
+                @click="removePaper(selectedPaper.id)"
+              />
+            </UTooltip>
           </div>
 
-          <div class="grid grid-cols-2 gap-4 mb-5 max-sm:grid-cols-1 min-w-0">
-            <AppCard class="!p-4 bg-surface-soft">
-              <div
-                class="text-xs text-muted tracking-wide uppercase mb-3 font-bold"
-              >
+          <div class="mt-5 grid gap-4 sm:grid-cols-2">
+            <div class="rounded-lg border border-default bg-elevated p-4">
+              <p class="text-xs font-medium uppercase tracking-wide text-muted">
                 题量统计
-              </div>
-              <div class="grid gap-2">
+              </p>
+              <div class="mt-3 space-y-2">
                 <div
                   v-for="[type, count] in typeStats"
                   :key="type"
                   class="flex items-center justify-between text-sm"
                 >
                   <span class="text-muted">{{ typeLabels[type] }}</span>
-                  <span class="font-semibold">
-                    {{ count }}
-                    <span class="text-xs text-muted font-normal ml-0.5">
-                      题
-                    </span>
-                  </span>
+                  <span class="font-medium text-highlighted">{{ count }}</span>
                 </div>
                 <div
-                  class="border-t border-[color:var(--border)] pt-2 mt-1 flex items-center justify-between text-sm font-medium"
+                  class="flex items-center justify-between border-t border-default pt-2 text-sm"
                 >
-                  <span>总计</span>
-                  <span class="text-brand">
+                  <span class="font-medium">总计</span>
+                  <span class="font-semibold text-primary">
                     {{ selectedPaper.questions.length }} 题
                   </span>
                 </div>
               </div>
-            </AppCard>
+            </div>
 
-            <AppCard class="!p-4 bg-surface-soft">
-              <div
-                class="text-xs text-muted tracking-wide uppercase mb-3 font-bold"
-              >
+            <div class="rounded-lg border border-default bg-elevated p-4">
+              <p class="text-xs font-medium uppercase tracking-wide text-muted">
                 来源题库
-              </div>
+              </p>
               <div
                 v-if="selectedPaper.bankNames?.length"
-                class="flex flex-wrap gap-1.5"
+                class="mt-3 flex flex-wrap gap-1.5"
               >
-                <span
+                <UBadge
                   v-for="name in selectedPaper.bankNames"
                   :key="name"
-                  class="text-xs px-2 py-1 rounded-full bg-surface-chip text-muted"
+                  color="neutral"
+                  variant="soft"
+                  size="md"
                 >
                   {{ name }}
-                </span>
+                </UBadge>
               </div>
-              <div v-else class="text-xs text-muted">未知来源</div>
-            </AppCard>
+              <p v-else class="mt-3 text-sm text-muted">未知来源</p>
+            </div>
           </div>
 
-          <div class="flex gap-3 justify-center mt-5">
-            <AppButton
-              :icon-path="mdiPlay"
-              :icon-size="18"
+          <div class="mt-6 flex flex-wrap gap-3">
+            <UButton
+              icon="i-lucide-play"
+              label="练习模式"
               @click="startNewAttempt('practice')"
-            >
-              练习模式
-            </AppButton>
-            <AppButton
-              :icon-path="mdiPlay"
-              :icon-size="18"
-              variant="secondary"
+            />
+            <UButton
+              icon="i-lucide-square-pen"
+              label="考试模式"
+              color="neutral"
+              variant="outline"
               @click="startNewAttempt('exam')"
-            >
-              考试模式
-            </AppButton>
+            />
           </div>
-        </AppCard>
+        </UCard>
 
-        <AppCard class="max-sm:p-4">
-          <div class="text-sm font-medium mb-4 flex items-center gap-2">
-            <AppIcon :path="mdiHistory" :size="18" class="text-muted" />
-            <span>历史作答记录 ({{ selectedAttempts.length }}次)</span>
-          </div>
+        <UCard>
+          <template #header>
+            <div class="flex items-center gap-2">
+              <UIcon name="i-lucide-history" class="size-4 text-muted" />
+              <span class="text-sm font-medium text-highlighted">
+                历史作答
+              </span>
+              <UBadge color="neutral" variant="soft" size="md">
+                {{ selectedAttempts.length }}
+              </UBadge>
+            </div>
+          </template>
 
-          <div
+          <p
             v-if="selectedAttempts.length === 0"
-            class="text-sm text-muted text-center py-4"
+            class="py-6 text-center text-sm text-muted"
           >
             暂无历史作答
-          </div>
+          </p>
 
-          <div v-else class="flex flex-col gap-3">
+          <div v-else class="space-y-2">
             <div
               v-for="(attempt, index) in selectedAttempts"
               :key="attempt.id"
-              class="p-3 border border-[color:var(--border)] rounded-lg flex items-center justify-between gap-3 flex-wrap"
+              class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-default p-3"
             >
-              <div class="flex flex-col">
-                <span class="text-sm font-medium flex items-center gap-2">
-                  第 {{ selectedAttempts.length - index }} 次作答
-                  <span
-                    class="text-[10px] px-1.5 py-0.5 rounded-full"
-                    :class="
-                      attempt.submittedAt
-                        ? 'bg-success/10 text-success'
-                        : 'bg-warning/10 text-warning'
-                    "
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium text-highlighted">
+                    第 {{ selectedAttempts.length - index }} 次作答
+                  </span>
+                  <UBadge
+                    :color="attempt.submittedAt ? 'success' : 'warning'"
+                    variant="soft"
+                    size="md"
                   >
                     {{ attempt.submittedAt ? '已完成' : '进行中' }}
-                  </span>
-                </span>
-                <span class="text-xs text-muted mt-1">
-                  开始于:
+                  </UBadge>
+                  <UBadge color="neutral" variant="soft" size="md">
+                    {{ attempt.mode === 'exam' ? '考试' : '练习' }}
+                  </UBadge>
+                </div>
+                <p class="mt-1 text-xs text-muted">
+                  开始于
                   {{ new Date(attempt.startedAt).toLocaleString('zh-CN') }}
-                </span>
-                <span class="text-xs text-muted">
-                  模式: {{ attempt.mode === 'exam' ? '考试' : '练习' }}
-                </span>
+                </p>
               </div>
 
-              <div class="flex items-center gap-2">
-                <AppButton
-                  size="small"
-                  variant="secondary"
+              <div class="flex items-center gap-1">
+                <UButton
+                  size="sm"
+                  color="neutral"
+                  variant="outline"
+                  :label="attempt.submittedAt ? '查看记录' : '继续作答'"
                   @click="resumeOrReviewAttempt(attempt)"
-                >
-                  {{ attempt.submittedAt ? '查看记录' : '继续作答' }}
-                </AppButton>
-                <AppButton
+                />
+                <UButton
                   v-if="attempt.submittedAt"
-                  size="small"
-                  variant="secondary"
+                  size="sm"
+                  color="neutral"
+                  variant="ghost"
+                  icon="i-lucide-circle-alert"
+                  label="错题"
                   @click="viewWrongQuestions(attempt)"
-                >
-                  <AppIcon
-                    :path="mdiAlertCircleOutline"
-                    :size="14"
-                    class="mr-1"
+                />
+                <UTooltip text="删除此作答记录">
+                  <UButton
+                    color="error"
+                    variant="ghost"
+                    icon="i-lucide-trash"
+                    square
+                    size="sm"
+                    aria-label="删除此作答记录"
+                    @click="deleteAttempt(attempt.id)"
                   />
-                  错题
-                </AppButton>
-                <button
-                  class="text-danger p-2 rounded hover:bg-danger/10 transition-colors cursor-pointer border-none bg-transparent shrink-0"
-                  :title="'删除此作答记录'"
-                  @click="deleteAttempt(attempt.id)"
-                >
-                  <AppIcon :path="mdiTrashCanOutline" :size="20" />
-                </button>
+                </UTooltip>
               </div>
             </div>
           </div>
-        </AppCard>
+        </UCard>
       </div>
     </div>
   </PageLayout>

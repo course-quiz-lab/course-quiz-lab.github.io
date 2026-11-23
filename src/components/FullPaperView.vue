@@ -1,16 +1,14 @@
 <script setup lang="ts">
-import { mdiChevronLeft, mdiChevronRight } from '@mdi/js';
 import { computed, ref } from 'vue';
 import { useAttemptStore } from '../stores/attempt';
 import { usePaperStore } from '../stores/paper';
 import type { QuestionType } from '../types/core';
 import { isMultiSelectType } from '../types/core';
+import { formatAnswerText } from '../utils/answer';
 import { evaluateStatus } from '../utils/scoring';
 import QuestionCard from './QuestionCard.vue';
 import QuestionOptions from './QuestionOptions.vue';
 import QuizLayout from './QuizLayout.vue';
-import AppButton from './ui/AppButton.vue';
-import AppIcon from './ui/AppIcon.vue';
 
 const PAGE_SIZE = 10;
 
@@ -30,39 +28,6 @@ const totalPages = computed(() =>
 const currentQuestions = computed(() => {
   const start = (currentPage.value - 1) * PAGE_SIZE;
   return questions.value.slice(start, start + PAGE_SIZE);
-});
-
-function goToPage(page: number) {
-  if (page < 1 || page > totalPages.value) return;
-  currentPage.value = page;
-}
-
-const visiblePages = computed<(number | 'ellipsis')[]>(() => {
-  const total = totalPages.value;
-  const current = currentPage.value;
-  const pages: (number | 'ellipsis')[] = [];
-
-  if (total <= 7) {
-    for (let i = 1; i <= total; i++) pages.push(i);
-    return pages;
-  }
-
-  // Always include first page
-  pages.push(1);
-
-  if (current > 3) pages.push('ellipsis');
-
-  // Pages around current
-  const start = Math.max(2, current - 1);
-  const end = Math.min(total - 1, current + 1);
-  for (let i = start; i <= end; i++) pages.push(i);
-
-  if (current < total - 2) pages.push('ellipsis');
-
-  // Always include last page
-  pages.push(total);
-
-  return pages;
 });
 
 const allStatuses = computed(() =>
@@ -92,13 +57,7 @@ function answerStatus(questionId: string) {
 
 function answerText(questionId: string) {
   const question = resolveQuestion(questionId);
-  if (!question) return '';
-  if (question.type === 'judge') {
-    return question.answer
-      .map((id) => (id === 'T' ? '正确' : '错误'))
-      .join(' / ');
-  }
-  return question.answer.join(' / ');
+  return question ? formatAnswerText(question) : '';
 }
 
 function showFeedback(questionId: string) {
@@ -153,6 +112,9 @@ function scrollToQuestion(index: number) {
 <template>
   <QuizLayout
     v-if="paper && attempt"
+    tabindex="-1"
+    data-quiz-focus-target
+    class="outline-none"
     :total="total"
     :statuses="allStatuses"
     :current-index="(currentPage - 1) * PAGE_SIZE"
@@ -162,8 +124,14 @@ function scrollToQuestion(index: number) {
     @select="scrollToQuestion"
   >
     <!-- Page info -->
-    <div class="flex items-center justify-between text-sm text-muted px-1">
-      <span>第 {{ currentPage }} / {{ totalPages }} 页</span>
+    <div
+      class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-elevated px-3 py-2 text-sm text-muted"
+    >
+      <span>
+        第
+        <span class="font-medium text-highlighted">{{ currentPage }}</span>
+        / {{ totalPages }} 页
+      </span>
       <span>共 {{ total }} 题 · 每页 {{ PAGE_SIZE }} 题</span>
     </div>
 
@@ -184,75 +152,38 @@ function scrollToQuestion(index: number) {
           :question="resolveQuestion(question.id) ?? question"
           :modelValue="attempt.answers[question.id]?.selected ?? []"
           :disabled="optionsDisabled(question.id)"
-          @update:modelValue="
+          :reveal-answer="optionsDisabled(question.id)"
+          @update:model-value="
             (selected) => handleSelect(question.id, selected, question.type)
           "
         />
         <div
-          class="mt-[12px]"
           v-if="
             isMultiSelectType(question.type) &&
             attempt.mode === 'practice' &&
-            !attempt.answers[question.id]?.submitted
+            !attempt.answers[question.id]?.submitted &&
+            (attempt.answers[question.id]?.selected.length ?? 0) > 0
           "
+          class="mt-3"
         >
-          <AppButton
+          <UButton
             :disabled="optionsDisabled(question.id)"
+            icon="i-lucide-check"
+            label="提交本题"
             @click="handleSubmit(question.id)"
-          >
-            提交本题
-          </AppButton>
+          />
         </div>
       </QuestionCard>
     </div>
 
     <!-- Pagination -->
-    <div
+    <UPagination
       v-if="totalPages > 1"
-      class="flex items-center justify-center gap-3 py-4"
-    >
-      <AppButton
-        variant="ghost"
-        class="!px-3 !py-1.5"
-        :disabled="currentPage <= 1"
-        @click="goToPage(currentPage - 1)"
-      >
-        <AppIcon :path="mdiChevronLeft" :size="18" />
-        上一页
-      </AppButton>
-
-      <div class="flex items-center gap-1">
-        <template v-for="item in visiblePages" :key="item">
-          <span
-            v-if="item === 'ellipsis'"
-            class="w-8 h-8 inline-flex items-center justify-center text-sm text-muted select-none"
-          >
-            …
-          </span>
-          <button
-            v-else
-            class="w-8 h-8 rounded-lg border-none text-sm cursor-pointer transition-colors duration-150"
-            :class="
-              item === currentPage
-                ? 'bg-brand text-white font-semibold'
-                : 'bg-surface-soft text-muted hover:bg-surface-chip'
-            "
-            @click="goToPage(item)"
-          >
-            {{ item }}
-          </button>
-        </template>
-      </div>
-
-      <AppButton
-        variant="ghost"
-        class="!px-3 !py-1.5"
-        :disabled="currentPage >= totalPages"
-        @click="goToPage(currentPage + 1)"
-      >
-        下一页
-        <AppIcon :path="mdiChevronRight" :size="18" />
-      </AppButton>
-    </div>
+      v-model:page="currentPage"
+      :total="total"
+      :items-per-page="PAGE_SIZE"
+      :sibling-count="1"
+      class="flex items-center justify-center py-4"
+    />
   </QuizLayout>
 </template>

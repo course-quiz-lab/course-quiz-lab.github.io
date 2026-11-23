@@ -16,10 +16,8 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div
-    class="grid gap-[26px] grid-cols-[minmax(0,1fr)_300px] max-lg:!grid-cols-1"
-  >
-    <div class="grid gap-4 max-lg:order-last">
+  <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div class="grid min-w-0 gap-4 max-lg:order-last">
       <slot />
     </div>
 

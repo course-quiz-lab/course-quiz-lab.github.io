@@ -2,12 +2,13 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import StatusPill from '../components/StatusPill.vue';
-import AppButton from '../components/ui/AppButton.vue';
+import PageLayout from '../components/ui/PageLayout.vue';
 import Pagination from '../components/ui/Pagination.vue';
 import { useAttemptStore } from '../stores/attempt';
 import { usePaperStore } from '../stores/paper';
 import type { QuestionItem } from '../types/bank';
 import type { QuestionType } from '../types/core';
+import { formatAnswerText } from '../utils/answer';
 import { evaluateStatus } from '../utils/scoring';
 
 const PAGE_SIZE = 10;
@@ -49,7 +50,6 @@ const statusMap = computed(() => {
 });
 
 const statuses = computed(() => Object.values(statusMap.value));
-
 const correctCount = computed(
   () => statuses.value.filter((status) => status === 'correct').length,
 );
@@ -91,97 +91,141 @@ function typeLabel(type: QuestionType) {
 }
 
 function answerLabel(question: QuestionItem) {
-  if (question.type === 'judge') {
-    return question.answer
-      .map((id) => (id === 'T' ? '正确' : '错误'))
-      .join(' / ');
-  }
-  return question.answer.join(' / ');
+  return formatAnswerText(question);
 }
 </script>
 
 <template>
-  <div v-if="paper && attempt" class="page">
-    <section
-      class="bg-surface rounded-2xl p-[26px] max-sm:p-4 border border-[rgba(43,34,24,0.12)] grid gap-4"
-    >
-      <div class="text-sm text-muted tracking-wide uppercase">作答结果</div>
-      <div v-if="!canReview" class="text-muted text-sm">
-        考试尚未交卷，暂无法查看结果。
-      </div>
-      <div
-        v-else
-        class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-4"
-      >
-        <div class="p-4 rounded-xl bg-surface-soft">
-          <div class="text-muted text-xs">正确题数</div>
-          <div class="text-xl mt-1.5">{{ correctCount }} / {{ total }}</div>
-        </div>
-        <div class="p-4 rounded-xl bg-surface-soft">
-          <div class="text-muted text-xs">正确率</div>
-          <div class="text-xl mt-1.5">{{ percent }}%</div>
-        </div>
-        <div class="p-4 rounded-xl bg-surface-soft">
-          <div class="text-muted text-xs">当前模式</div>
-          <div class="text-xl mt-1.5">
-            {{ attempt.mode === 'practice' ? '练习' : '考试' }}
-          </div>
-        </div>
-      </div>
-      <div class="flex flex-wrap gap-[12px] mt-3">
-        <AppButton variant="secondary" @click="router.push('/papers')">
-          返回试卷列表
-        </AppButton>
-        <AppButton
-          v-if="!attempt.submittedAt"
-          @click="router.push(`/quiz/${paper.id}/attempt/${attempt.id}`)"
-        >
-          继续作答
-        </AppButton>
-      </div>
-    </section>
-
-    <section
-      v-if="canReview"
-      class="bg-surface rounded-2xl p-[26px] max-sm:p-4 border border-[rgba(43,34,24,0.12)]"
-    >
-      <div class="text-sm text-muted tracking-wide uppercase mb-3">
-        错题与部分正确
-        <span v-if="incorrectList.length > 0" class="ml-1 font-normal">
-          （{{ incorrectList.length }} 题）
-        </span>
-      </div>
-      <div v-if="incorrectList.length === 0" class="text-muted text-sm">
-        目前没有错题。
-      </div>
-      <ul v-else class="list-none m-0 p-0 grid gap-6">
-        <li
-          v-for="question in pagedIncorrect"
-          :key="question.id"
-          class="p-4 rounded-xl border border-[rgba(43,34,24,0.12)] bg-surface-review"
-        >
-          <div class="mb-[6px]">{{ question.stem }}</div>
-          <div class="flex gap-[12px] flex-wrap">
-            <StatusPill :status="statusMap[question.id]" />
-            <span
-              class="bg-surface-chip rounded-full px-2.5 py-1 text-xs text-muted"
-            >
-              题型：{{ typeLabel(question.type) }}
-            </span>
-            <span
-              class="bg-surface-chip rounded-full px-2.5 py-1 text-xs text-muted"
-            >
-              参考答案：{{ answerLabel(question) }}
-            </span>
-          </div>
-        </li>
-      </ul>
-      <Pagination
-        v-if="totalPages > 1"
-        :current="currentPage"
-        :total="totalPages"
-        @update:current="currentPage = $event"
+  <PageLayout
+    title="作答小结"
+    :description="paper?.title"
+    max-width="880px"
+    show-back
+  >
+    <template #header-actions>
+      <UButton
+        color="neutral"
+        variant="outline"
+        icon="i-lucide-arrow-left"
+        label="返回试卷列表"
+        @click="router.push('/papers')"
       />
-    </section>
-  </div>
+      <UButton
+        v-if="attempt && !attempt.submittedAt"
+        icon="i-lucide-play"
+        label="继续作答"
+        @click="router.push(`/quiz/${paper?.id}/attempt/${attempt.id}`)"
+      />
+    </template>
+
+    <div v-if="paper && attempt" class="space-y-6">
+      <UCard :ui="{ body: 'p-5 sm:p-6' }">
+        <div v-if="!canReview" class="space-y-3">
+          <UAlert
+            color="warning"
+            variant="soft"
+            icon="i-lucide-clock"
+            title="考试尚未交卷"
+            description="交卷后才能查看本次作答结果。"
+          />
+        </div>
+
+        <div v-else class="space-y-6">
+          <div class="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+            <div
+              class="flex flex-col items-center justify-center rounded-xl bg-elevated px-6 py-8 text-center"
+            >
+              <span class="text-sm text-muted">正确率</span>
+              <p
+                class="mt-2 text-5xl font-semibold tracking-tight text-highlighted"
+              >
+                {{ percent }}<span class="text-2xl text-muted">%</span>
+              </p>
+              <p class="mt-2 text-sm text-muted">
+                正确 {{ correctCount }} / {{ total }} 题
+              </p>
+            </div>
+
+            <div class="flex flex-col justify-center gap-4">
+              <UProgress
+                :model-value="percent"
+                :color="percent >= 60 ? 'success' : 'error'"
+                size="lg"
+              />
+              <div class="grid gap-3 sm:grid-cols-3">
+                <div class="rounded-lg border border-default p-4">
+                  <p class="text-xs text-muted">模式</p>
+                  <p class="mt-1 text-lg font-medium text-highlighted">
+                    {{ attempt.mode === 'practice' ? '练习' : '考试' }}
+                  </p>
+                </div>
+                <div class="rounded-lg border border-default p-4">
+                  <p class="text-xs text-muted">总题数</p>
+                  <p class="mt-1 text-lg font-medium text-highlighted">
+                    {{ paper.questions.length }}
+                  </p>
+                </div>
+                <div class="rounded-lg border border-default p-4">
+                  <p class="text-xs text-muted">错题</p>
+                  <p class="mt-1 text-lg font-medium text-error">
+                    {{ incorrectList.length }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </UCard>
+
+      <UCard v-if="canReview" :ui="{ body: 'p-5 sm:p-6' }">
+        <template #header>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-highlighted">
+              错题与部分正确
+            </span>
+            <UBadge color="neutral" variant="soft" size="md">
+              {{ incorrectList.length }}
+            </UBadge>
+          </div>
+        </template>
+
+        <UEmpty
+          v-if="incorrectList.length === 0"
+          icon="i-lucide-party-popper"
+          title="没有错题"
+          description="本次作答全部正确，继续保持！"
+          variant="naked"
+          class="py-10"
+        />
+
+        <ul v-else class="m-0 list-none space-y-3 p-0">
+          <li
+            v-for="question in pagedIncorrect"
+            :key="question.id"
+            class="rounded-lg border border-default p-4"
+          >
+            <p class="text-sm leading-relaxed text-highlighted">
+              {{ question.stem }}
+            </p>
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              <StatusPill :status="statusMap[question.id]" />
+              <UBadge color="neutral" variant="soft" size="md">
+                题型：{{ typeLabel(question.type) }}
+              </UBadge>
+              <UBadge color="primary" variant="soft" size="md">
+                参考答案：{{ answerLabel(question) }}
+              </UBadge>
+            </div>
+          </li>
+        </ul>
+
+        <Pagination
+          v-if="totalPages > 1"
+          :current="currentPage"
+          :total="totalPages"
+          @update:current="currentPage = $event"
+        />
+      </UCard>
+    </div>
+  </PageLayout>
 </template>

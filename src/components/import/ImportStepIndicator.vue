@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * 保留自定义实现：UStepper 默认将标题放在指示器下方，并内置前进/后退语义，
+ * 无法复现当前“数字 + 文案同行、连接线撑满、仅允许回到已完成步骤”的紧凑布局。
+ */
 import { useRouter } from 'vue-router';
 
 const props = defineProps<{
@@ -34,35 +38,35 @@ function navigate(step: number) {
 </script>
 
 <template>
-  <div
-    class="flex items-center gap-1.5 sm:gap-2 mb-5 sm:mb-6 text-xs sm:text-sm"
-  >
+  <div class="flex items-center gap-1.5 text-xs sm:gap-2 sm:text-sm">
     <template v-for="(s, idx) in steps" :key="s.step">
       <button
-        class="flex items-center gap-1 border-none bg-transparent transition-opacity"
+        type="button"
+        class="flex items-center gap-1.5 rounded-full py-1 transition-colors"
         :class="[
-          currentStep === s.step ? 'text-brand font-semibold' : 'text-muted',
+          currentStep === s.step ? 'font-medium text-primary' : 'text-muted',
           s.step < currentStep
-            ? 'cursor-pointer hover:opacity-70'
+            ? 'cursor-pointer hover:text-primary'
             : 'cursor-default',
         ]"
         :disabled="s.step >= currentStep"
         @click="navigate(s.step)"
       >
         <span
-          class="inline-flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full text-[9px] sm:text-[11px] font-bold"
+          class="grid size-5 place-items-center rounded-full text-xs font-semibold sm:size-6"
           :class="
-            currentStep === s.step ? 'bg-brand text-white' : 'bg-surface-soft'
+            currentStep === s.step
+              ? 'bg-primary text-white'
+              : s.step < currentStep
+                ? 'bg-primary/10 text-primary'
+                : 'bg-elevated text-muted'
           "
         >
           {{ s.step }}
         </span>
         <span class="hidden sm:inline">{{ s.label }}</span>
       </button>
-      <div
-        v-if="idx < steps.length - 1"
-        class="flex-1 h-px bg-[color:var(--border)]"
-      />
+      <div v-if="idx < steps.length - 1" class="h-px flex-1 bg-accented" />
     </template>
   </div>
 </template>

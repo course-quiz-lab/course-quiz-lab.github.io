@@ -62,65 +62,84 @@ const pagedQuestions = computed(() => {
   const start = (currentPage.value - 1) * PAGE_SIZE;
   return wrongQuestions.value.slice(start, start + PAGE_SIZE);
 });
-
-
 </script>
 
 <template>
-  <PageLayout title="错题回顾" max-width="800px">
-    <div v-if="isLoading" class="text-muted text-sm pb-[100px]">加载中…</div>
+  <PageLayout
+    title="错题回顾"
+    :description="paper?.title"
+    max-width="880px"
+    show-back
+  >
+    <template #header-actions>
+      <UButton
+        v-if="paper && attempt"
+        color="neutral"
+        variant="outline"
+        icon="i-lucide-clipboard-list"
+        label="查看小结"
+        :to="`/review/${paper.id}/attempt/${attempt.id}`"
+      />
+    </template>
 
-    <template v-else>
-      <div v-if="!paper || !attempt" class="text-muted text-sm pb-10">
-        查无记录或记录已删除。
-      </div>
-      <div
-        v-else-if="wrongQuestions.length === 0"
-        class="bg-surface rounded-2xl p-8 border border-[color:var(--border)] text-center text-muted"
-      >
-        本次作答没有错题。
-      </div>
+    <div v-if="isLoading" class="space-y-3">
+      <USkeleton class="h-20 w-full rounded-xl" />
+      <USkeleton class="h-40 w-full rounded-xl" />
+    </div>
 
-      <div v-else>
-        <div
-          class="bg-surface rounded-2xl p-5 border border-[color:var(--border)] mb-6 text-sm flex gap-6 max-sm:flex-col max-sm:gap-3"
-        >
-          <div class="flex flex-col">
-            <span class="text-muted text-xs mb-1">所属试卷</span>
-            <span class="font-medium">{{ paper.title }}</span>
+    <p v-else-if="!paper || !attempt" class="text-sm text-muted">
+      查无记录或记录已删除。
+    </p>
+
+    <UEmpty
+      v-else-if="wrongQuestions.length === 0"
+      icon="i-lucide-party-popper"
+      title="本次作答没有错题"
+      description="全部答对，继续保持！"
+      variant="naked"
+      class="rounded-xl border border-dashed border-default py-16"
+    />
+
+    <div v-else class="space-y-6">
+      <UCard :ui="{ body: 'p-5' }">
+        <div class="grid gap-4 sm:grid-cols-3">
+          <div>
+            <p class="text-xs text-muted">所属试卷</p>
+            <p class="mt-1 truncate text-sm font-medium text-highlighted">
+              {{ paper.title }}
+            </p>
           </div>
-          <div class="flex flex-col">
-            <span class="text-muted text-xs mb-1">错题总数</span>
-            <span class="font-medium text-danger"
-              >{{ wrongQuestions.length }} 题</span
-            >
+          <div>
+            <p class="text-xs text-muted">错题总数</p>
+            <p class="mt-1 text-sm font-medium text-error">
+              {{ wrongQuestions.length }} 题
+            </p>
           </div>
-          <div class="flex flex-col">
-            <span class="text-muted text-xs mb-1">作答时间</span>
-            <span class="font-medium">{{
-              new Date(attempt.startedAt).toLocaleString('zh-CN')
-            }}</span>
+          <div>
+            <p class="text-xs text-muted">作答时间</p>
+            <p class="mt-1 text-sm font-medium text-highlighted">
+              {{ new Date(attempt.startedAt).toLocaleString('zh-CN') }}
+            </p>
           </div>
         </div>
+      </UCard>
 
-        <div class="grid gap-4 mb-6">
-          <WrongQuestionCard
-            v-for="item in pagedQuestions"
-            :key="item.question.id"
-            :question="item.question"
-            :status="item.status"
-            :selected-answer="attempt?.answers[item.question.id]?.selected ?? []"
-          />
-        </div>
-
-        <Pagination
-          v-if="totalPages > 1"
-          :current="currentPage"
-          :total="totalPages"
-          @update:current="currentPage = $event"
-          class="pb-10"
+      <div class="grid gap-4">
+        <WrongQuestionCard
+          v-for="item in pagedQuestions"
+          :key="item.question.id"
+          :question="item.question"
+          :status="item.status"
+          :selected-answer="attempt.answers[item.question.id]?.selected ?? []"
         />
       </div>
-    </template>
+
+      <Pagination
+        v-if="totalPages > 1"
+        :current="currentPage"
+        :total="totalPages"
+        @update:current="currentPage = $event"
+      />
+    </div>
   </PageLayout>
 </template>

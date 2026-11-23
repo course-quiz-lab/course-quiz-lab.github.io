@@ -1,34 +1,71 @@
 @import 'tailwindcss';
-@import './styles/tokens.css';
-@import './styles/base.css';
+@import '@nuxt/ui';
 
 @theme {
-  --color-brand: var(--brand);
-  --color-brand-strong: var(--brand-strong);
-  --color-muted: var(--muted);
-  --color-surface: var(--surface);
-  --color-surface-alt: var(--surface-alt);
-  --color-surface-soft: var(--surface-soft);
-  --color-surface-hero: var(--surface-hero);
-  --color-surface-hero-alt: var(--surface-hero-alt);
-  --color-surface-alert: var(--surface-alert);
-  --color-surface-code: var(--surface-code);
-  --color-surface-status: var(--surface-status);
-  --color-surface-chip: var(--surface-chip);
-  --color-surface-review: var(--surface-review);
-  --color-surface-option: var(--surface-option);
-  --color-surface-grid: var(--surface-grid);
-  --color-accent: var(--accent);
-  --color-ok: var(--ok);
-  --color-warn: var(--warn);
-  --color-danger: var(--danger);
-
-  --radius-theme: var(--radius);
-  --radius-theme-sm: var(--radius-sm);
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --font-mono:
+    'Cascadia Code', ui-monospace, 'SFMono-Regular', 'Courier New', monospace;
 }
 
-/* Shared across all pages */
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-border-accented) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--ui-border-accented);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-text-dimmed);
+}
+
+/* 沉浸模式全屏时沿用应用背景，避免浏览器默认黑底 */
+:fullscreen {
+  background-color: var(--ui-bg);
+  overscroll-behavior: none;
+}
+
+/* Shared page rhythm */
 .page {
   display: grid;
-  gap: var(--space-4);
+  gap: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .page {
+    gap: 1rem;
+  }
 }

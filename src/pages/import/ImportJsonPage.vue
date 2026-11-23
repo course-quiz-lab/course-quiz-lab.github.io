@@ -1,13 +1,69 @@
 <script setup lang="ts">
-import { mdiFileDocumentOutline } from '@mdi/js';
 import { useRouter } from 'vue-router';
-import AppCard from '../../components/ui/AppCard.vue';
-import AppIcon from '../../components/ui/AppIcon.vue';
 import { useImportStore } from '../../stores/import';
 import { validateBankSchema } from '../../utils/validation';
 
 const router = useRouter();
 const importStore = useImportStore();
+const toast = useToast();
+
+const schemaUrl =
+  'https://course-quiz-lab.github.io/json-schema/v1/bank.schema.json';
+
+/** 可直接粘贴给 AI 的提示词：约束与 schema 保持一致 */
+const aiPrompt = `你是一名题库整理助手。请把我在最后提供的课程内容整理成题库 JSON。
+
+【输出格式】
+1. 严格遵循这个 JSON Schema：${schemaUrl}
+2. 只输出一个 JSON 代码块，不要输出多余的解释或注释；仅当触及下面“质量要求”中需要说明的情况时，可在代码块后附一句话。
+
+【根对象】
+只能包含三个键：$schema、metadata、questions。
+- $schema：固定为上面那个 Schema 地址。
+- metadata：必须包含 name（题库名称）、course（课程名称）、author（作者/整理者）；可选 source（来源说明）、sourceUrl（来源链接）。
+- questions：题目数组，至少 1 题。
+
+【题目字段】
+- type：只能是 single（单选）、multiple（多选）、judge（判断）、indeterminate（不定项）。
+- stem：题干，必填且不能为空。
+- options：选项文本数组，至少 2 项；只有选择题需要，判断题不要写这个字段。
+- answer：
+  · single 用正确选项的下标（从 0 开始的整数）；
+  · multiple / indeterminate 用下标数组，至少 1 项且不重复；
+  · judge 用 true（正确）或 false（错误）。
+- analysis：可选，题目解析。
+- difficulty：可选，难度（建议 easy / medium / hard）。
+- 除上述字段外不要再添加任何键（例如 meta、title、version 等），否则会被判定为非法。
+
+【质量要求】
+- answer 的下标必须落在 options 的范围内，且与选项内容对应。
+- 题干和选项忠于原文，不要编造原文没有的知识点，也不要重复出题。
+
+【待整理的内容】
+"""
+（在这里粘贴你的讲义、笔记或题目原文）
+"""`;
+
+async function copyPrompt() {
+  try {
+    await navigator.clipboard.writeText(aiPrompt);
+    toast.add({
+      title: '提示词已复制',
+      description: '粘贴到 AI 对话框，附上你的资料即可',
+      icon: 'i-lucide-copy-check',
+      color: 'success',
+      duration: 2000,
+    });
+  } catch {
+    toast.add({
+      title: '复制失败',
+      description: '请手动选中下面的文本复制',
+      icon: 'i-lucide-circle-alert',
+      color: 'error',
+      duration: 2500,
+    });
+  }
+}
 
 async function handleFileChange(event: Event) {
   const input = event.target as HTMLInputElement;
@@ -39,49 +95,57 @@ async function handleFileChange(event: Event) {
 </script>
 
 <template>
-  <div class="max-w-[576px] mx-auto">
-    <AppCard class="!p-4 sm:!p-5 overflow-hidden">
-      <div class="flex items-center gap-2 mb-3">
-        <span
-          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-brand text-white text-[11px] font-bold shrink-0"
-          >2</span
-        >
-        <h2 class="text-base max-sm:text-sm">上传 JSON 文件</h2>
-      </div>
+  <div class="mx-auto w-full max-w-xl">
+    <UCard>
+      <template #header>
+        <div class="flex items-center gap-2">
+          <span
+            class="grid size-6 place-items-center rounded-full bg-primary text-xs font-semibold text-white"
+          >
+            2
+          </span>
+          <h2 class="text-sm font-semibold text-highlighted">上传 JSON 文件</h2>
+        </div>
+      </template>
 
       <div
-        class="p-4 rounded-xl border border-dashed border-[color:var(--border)] bg-surface-soft"
+        class="rounded-xl border border-dashed border-default bg-elevated px-4 py-8 text-center"
       >
-        <div class="flex flex-col items-center gap-2 text-center">
-          <AppIcon
-            :path="mdiFileDocumentOutline"
-            :size="28"
-            class="text-muted"
-          />
-          <div>
-            <p class="text-sm font-medium">选择 JSON 文件</p>
-            <p class="text-xs text-muted mt-0.5">支持 JSON 格式的题库文件</p>
-          </div>
-          <input
-            type="file"
-            accept="application/json"
-            @change="handleFileChange"
-            class="text-xs max-w-full file:mr-2 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:bg-brand file:text-white file:cursor-pointer"
-          />
-          <span v-if="importStore.isLoading" class="text-xs text-muted"
-            >解析中…</span
-          >
-          <span v-else-if="importStore.fileName" class="text-xs text-muted">{{
-            importStore.fileName
-          }}</span>
-        </div>
+        <UIcon name="i-lucide-file-json" class="mx-auto size-8 text-muted" />
+        <p class="mt-3 text-sm font-medium text-highlighted">选择 JSON 文件</p>
+        <p class="mt-1 text-xs text-muted">支持符合 schema 的题库 JSON</p>
+
+        <!-- 保留原生 file input：UFileUpload 会改变为拖拽/受控模型交互 -->
+        <input
+          type="file"
+          accept="application/json"
+          class="mt-4 w-full max-w-full cursor-pointer text-xs text-muted file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
+          @change="handleFileChange"
+        />
+
+        <p v-if="importStore.isLoading" class="mt-2 text-xs text-muted">
+          解析中…
+        </p>
+        <p v-else-if="importStore.fileName" class="mt-2 text-xs text-muted">
+          {{ importStore.fileName }}
+        </p>
       </div>
 
-      <details class="mt-3 px-2">
-        <summary class="cursor-pointer text-xs text-muted">格式说明</summary>
-        <pre
-          class="mt-2 bg-[color:var(--surface-code)] rounded-xl p-3 font-['Cascadia_Mono','Courier_New',monospace] text-[10px] overflow-x-auto leading-relaxed"
-        >
+      <UCollapsible class="mt-4">
+        <template #default="{ open }">
+          <UButton
+            variant="link"
+            color="neutral"
+            size="xs"
+            class="px-0 text-muted"
+          >
+            {{ open ? '收起格式说明' : '格式说明' }}
+          </UButton>
+        </template>
+        <template #content>
+          <pre
+            class="mt-2 overflow-x-auto rounded-lg border border-default bg-elevated p-3 font-mono text-xs leading-relaxed text-default"
+          >
 {
   "metadata": {
     "name": "高等数学习题集",
@@ -95,22 +159,79 @@ async function handleFileChange(event: Event) {
       "options": ["A","B","C"], "answer": [0,2] },
     { "type": "judge", "stem": "题干…", "answer": true }
   ]
-}</pre
-        >
-      </details>
+}</pre>
+        </template>
+      </UCollapsible>
 
-      <!-- Errors -->
-      <div
+      <UCollapsible class="mt-2">
+        <template #default="{ open }">
+          <UButton
+            variant="link"
+            color="neutral"
+            size="xs"
+            class="px-0 text-muted"
+          >
+            {{ open ? '收起 AI 辅助生成教程' : 'AI 辅助生成教程' }}
+          </UButton>
+        </template>
+        <template #content>
+          <div class="mt-2 space-y-3 rounded-lg border border-default p-3">
+            <ol
+              class="m-0 grid list-decimal gap-1.5 pl-4 text-xs leading-relaxed text-muted"
+            >
+              <li>复制下面的提示词，粘贴到任意能处理长文本的 AI 对话框。</li>
+              <li>
+                在提示词末尾的引号里粘贴你的讲义、笔记或题目原文，然后发送。
+              </li>
+              <li>
+                把 AI 返回的 JSON 保存为
+                <span class="font-mono">.json</span>
+                文件，回到本页上传即可。
+              </li>
+            </ol>
+
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <ULink
+                :to="schemaUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                <UIcon name="i-lucide-external-link" class="size-3.5" />
+                查看题库 JSON Schema
+              </ULink>
+              <UButton
+                size="xs"
+                variant="outline"
+                color="neutral"
+                icon="i-lucide-copy"
+                label="复制提示词"
+                @click="copyPrompt"
+              />
+            </div>
+
+            <pre
+              class="max-h-72 select-all overflow-auto whitespace-pre-wrap break-words rounded-lg border border-default bg-elevated p-3 font-mono text-xs leading-relaxed text-default"
+              >{{ aiPrompt }}</pre>
+          </div>
+        </template>
+      </UCollapsible>
+
+      <UAlert
         v-if="importStore.errors.length"
-        class="mt-3 p-3 rounded-xl border border-[rgba(185,74,60,0.4)] bg-[rgba(185,74,60,0.08)]"
+        color="error"
+        variant="soft"
+        class="mt-4"
+        title="校验失败"
       >
-        <div class="font-semibold text-xs mb-1">校验失败</div>
-        <ul class="text-xs text-muted grid gap-0.5">
-          <li v-for="(item, index) in importStore.errors" :key="index">
-            {{ item }}
-          </li>
-        </ul>
-      </div>
-    </AppCard>
+        <template #description>
+          <ul class="grid gap-1 text-xs">
+            <li v-for="(item, index) in importStore.errors" :key="index">
+              {{ item }}
+            </li>
+          </ul>
+        </template>
+      </UAlert>
+    </UCard>
   </div>
 </template>

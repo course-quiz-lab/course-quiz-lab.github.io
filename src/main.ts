@@ -1,6 +1,8 @@
+import ui from '@nuxt/ui/vue-plugin';
 import { createPinia } from 'pinia';
 import { createApp } from 'vue';
 import App from './App.vue';
+import { applyStoredTheme } from './composables/useTheme';
 import router from './router';
 import { useBankStore } from './stores/bank';
 
@@ -10,6 +12,10 @@ async function bootstrap() {
   const app = createApp(App);
   const pinia = createPinia();
   app.use(pinia);
+  app.use(ui);
+
+  // 恢复用户的主色与明暗偏好（在挂载前执行，避免首屏闪烁）
+  applyStoredTheme();
 
   const bankStore = useBankStore();
   await bankStore.hydrate();
