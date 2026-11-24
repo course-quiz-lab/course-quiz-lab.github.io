@@ -30,12 +30,6 @@ const router = createRouter({
           meta: { title: '上传 JSON', back: '/import/select' },
         },
         {
-          path: 'fetch',
-          name: 'import-fetch',
-          component: () => import('../pages/import/ImportFetchPage.vue'),
-          meta: { title: '链接导入', back: '/import/select' },
-        },
-        {
           path: 'table',
           name: 'import-table',
           component: () => import('../pages/import/ImportTablePage.vue'),

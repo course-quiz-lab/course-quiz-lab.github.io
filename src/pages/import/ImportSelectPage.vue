@@ -13,13 +13,6 @@ interface MethodItem {
 
 const methods: MethodItem[] = [
   {
-    id: 'upload',
-    label: '上传 JSON',
-    icon: 'i-lucide-file-text',
-    disabled: false,
-    description: '从本地选择 JSON 格式的题库文件',
-  },
-  {
     id: 'cloud',
     label: '云端题库',
     icon: 'i-lucide-cloud',
@@ -27,12 +20,13 @@ const methods: MethodItem[] = [
     description: '从云端拉取题库索引并下载导入',
   },
   {
-    id: 'link',
-    label: '链接导入',
-    icon: 'i-lucide-link',
+    id: 'upload',
+    label: '导入 JSON',
+    icon: 'i-lucide-file-json',
     disabled: false,
-    description: '通过可公开访问的链接导入 JSON 题库',
+    description: '上传本地 JSON 文件，或从在线链接读取',
   },
+
   {
     id: 'wrongbook',
     label: '导入错题',
@@ -60,12 +54,14 @@ const router = useRouter();
 const importStore = useImportStore();
 
 function handleSelect(method: ImportMethod) {
-  importStore.setMethod(method);
+  // 先 reset 再 setMethod：reset() 会把 selectedMethod 重置为 upload
   importStore.reset();
+  importStore.setMethod(method);
 
-  const routes: Record<ImportMethod, string | null> = {
+  // 上传与链接已合并到 /import/json，由该页切换具体方式
+  const routes: Partial<Record<ImportMethod, string | null>> = {
     upload: '/import/json',
-    link: '/import/fetch',
+    link: '/import/json',
     xlsx: '/import/table',
     cloud: '/import/cloud',
     wrongbook: '/import/wrong',
@@ -81,11 +77,6 @@ function handleSelect(method: ImportMethod) {
 
 <template>
   <div class="space-y-4">
-    <div class="flex items-center gap-2 text-sm font-medium text-highlighted">
-      选择导入方式
-      <UBadge color="neutral" variant="soft" size="md">第 1 步</UBadge>
-    </div>
-
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <UPageCard
         v-for="method in methods"

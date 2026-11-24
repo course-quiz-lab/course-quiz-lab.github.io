@@ -32,7 +32,8 @@ const currentStep = computed<1 | 2 | 3>(() => {
           导入题库
         </h1>
         <p class="mt-1 text-sm text-muted">
-          支持 JSON、Excel、链接与云端题库，导入后保存在本地浏览器。
+          支持 JSON（上传或链接读取）、Excel
+          与云端题库，导入后保存在本地浏览器。
         </p>
       </div>
     </div>

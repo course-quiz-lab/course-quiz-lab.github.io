@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useImportStore } from '../../stores/import';
 import { validateBankSchema } from '../../utils/validation';
@@ -6,6 +7,20 @@ import { validateBankSchema } from '../../utils/validation';
 const router = useRouter();
 const importStore = useImportStore();
 const toast = useToast();
+
+/** 上传本地文件 / 从链接读取，两种方式共用一个入口页 */
+const mode = ref<'upload' | 'link'>(
+  importStore.selectedMethod === 'link' ? 'link' : 'upload',
+);
+
+watch(mode, (value) => {
+  importStore.selectedMethod = value;
+  // 切换方式时清掉上一次的错误，避免误导
+  importStore.errors = [];
+  importStore.warning = null;
+});
+
+const storeErrors = computed(() => importStore.errors);
 
 const schemaUrl =
   'https://course-quiz-lab.github.io/json-schema/v1/bank.schema.json';
@@ -37,12 +52,7 @@ const aiPrompt = `你是一名题库整理助手。请把我在最后提供的�
 
 【质量要求】
 - answer 的下标必须落在 options 的范围内，且与选项内容对应。
-- 题干和选项忠于原文，不要编造原文没有的知识点，也不要重复出题。
-
-【待整理的内容】
-"""
-（在这里粘贴你的讲义、笔记或题目原文）
-"""`;
+- 题干和选项忠于原文，不要编造原文没有的知识点，也不要重复出题。`;
 
 async function copyPrompt() {
   try {
@@ -65,32 +75,54 @@ async function copyPrompt() {
   }
 }
 
-async function handleFileChange(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-
-  importStore.fileName = file.name;
+/** 解析并校验 JSON 文本：读取方式（文件 / 链接）不同，后续流程完全一致 */
+async function consumeJson(
+  load: () => Promise<string>,
+  failureMessage: string,
+) {
   importStore.isLoading = true;
   importStore.errors = [];
   importStore.warning = null;
   importStore.preview = null;
 
   try {
-    const text = await file.text();
+    const text = await load();
     const parsed = JSON.parse(text);
     const result = validateBankSchema(parsed);
     importStore.errors = result.errors;
     importStore.warning = result.warning ?? null;
     importStore.preview = result.bank ?? null;
     if (!importStore.errors.length) {
-      router.push('/import/preview');
+      await router.push('/import/preview');
     }
   } catch {
-    importStore.errors = ['文件解析失败，请确认是有效的 JSON 格式。'];
+    importStore.errors = [failureMessage];
   } finally {
     importStore.isLoading = false;
   }
+}
+
+async function handleFileChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  importStore.fileName = file.name;
+  await consumeJson(
+    () => file.text(),
+    '文件解析失败，请确认是有效的 JSON 格式。',
+  );
+}
+
+async function importFromUrl() {
+  const url = importStore.importUrl.trim();
+  if (!url) return;
+
+  await consumeJson(async () => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('FETCH_FAILED');
+    return await response.text();
+  }, '链接解析失败，请确认链接可访问且为有效 JSON。');
 }
 </script>
 
@@ -104,12 +136,33 @@ async function handleFileChange(event: Event) {
           >
             2
           </span>
-          <h2 class="text-sm font-semibold text-highlighted">上传 JSON 文件</h2>
+          <h2 class="text-sm font-semibold text-highlighted">导入 JSON 题库</h2>
         </div>
       </template>
 
+      <UFieldGroup class="w-full">
+        <UButton
+          block
+          :variant="mode === 'upload' ? 'solid' : 'outline'"
+          :color="mode === 'upload' ? 'primary' : 'neutral'"
+          icon="i-lucide-file-json"
+          label="上传文件"
+          @click="mode = 'upload'"
+        />
+        <UButton
+          block
+          :variant="mode === 'link' ? 'solid' : 'outline'"
+          :color="mode === 'link' ? 'primary' : 'neutral'"
+          icon="i-lucide-link"
+          label="从链接读取"
+          @click="mode = 'link'"
+        />
+      </UFieldGroup>
+
+      <!-- 方式一：上传本地 JSON 文件 -->
       <div
-        class="rounded-xl border border-dashed border-default bg-elevated px-4 py-8 text-center"
+        v-if="mode === 'upload'"
+        class="mt-4 rounded-xl border border-dashed border-default bg-elevated px-4 py-8 text-center"
       >
         <UIcon name="i-lucide-file-json" class="mx-auto size-8 text-muted" />
         <p class="mt-3 text-sm font-medium text-highlighted">选择 JSON 文件</p>
@@ -131,49 +184,66 @@ async function handleFileChange(event: Event) {
         </p>
       </div>
 
-      <UCollapsible class="mt-4">
-        <template #default="{ open }">
-          <UButton
-            variant="link"
-            color="neutral"
-            size="xs"
-            class="px-0 text-muted"
-          >
-            {{ open ? '收起格式说明' : '格式说明' }}
-          </UButton>
-        </template>
-        <template #content>
-          <pre
-            class="mt-2 overflow-x-auto rounded-lg border border-default bg-elevated p-3 font-mono text-xs leading-relaxed text-default"
-          >
-{
-  "metadata": {
-    "name": "高等数学习题集",
-    "course": "高等数学",
-    "author": "张三"
-  },
-  "questions": [
-    { "type": "single", "stem": "题干…",
-      "options": ["A","B","C"], "answer": 0 },
-    { "type": "multiple", "stem": "题干…",
-      "options": ["A","B","C"], "answer": [0,2] },
-    { "type": "judge", "stem": "题干…", "answer": true }
-  ]
-}</pre>
-        </template>
-      </UCollapsible>
+      <!-- 方式二：从在线链接读取 -->
+      <div v-else class="mt-4 space-y-3">
+        <div class="flex items-start gap-3 rounded-lg bg-elevated p-4">
+          <UIcon
+            name="i-lucide-link"
+            class="mt-0.5 size-5 shrink-0 text-primary"
+          />
+          <div class="text-sm">
+            <p class="font-medium text-highlighted">粘贴题库链接</p>
+            <p class="mt-0.5 text-xs text-muted">
+              链接需可直接访问 JSON 文件，并允许跨域（CORS）访问。
+            </p>
+          </div>
+        </div>
+
+        <UInput
+          v-model="importStore.importUrl"
+          type="url"
+          size="lg"
+          icon="i-lucide-globe"
+          placeholder="https://example.com/questions.json"
+          aria-label="题库链接"
+          class="w-full"
+          @keydown.enter="importFromUrl"
+        />
+
+        <UButton
+          block
+          size="lg"
+          icon="i-lucide-download"
+          :loading="importStore.isLoading"
+          :disabled="!importStore.importUrl.trim() || importStore.isLoading"
+          :label="importStore.isLoading ? '解析中…' : '解析链接'"
+          @click="importFromUrl"
+        />
+      </div>
+
+      <ULink
+        :to="schemaUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="mt-4 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+      >
+        <UIcon name="i-lucide-external-link" class="size-3.5" />
+        查看题库 JSON Schema
+      </ULink>
 
       <UCollapsible class="mt-2">
-        <template #default="{ open }">
-          <UButton
-            variant="link"
-            color="neutral"
-            size="xs"
-            class="px-0 text-muted"
-          >
-            {{ open ? '收起 AI 辅助生成教程' : 'AI 辅助生成教程' }}
-          </UButton>
-        </template>
+        <UButton
+          class="group"
+          label="AI 辅助生成教程"
+          color="neutral"
+          variant="subtle"
+          trailing-icon="i-lucide-chevron-down"
+          :ui="{
+            trailingIcon:
+              'group-data-[state=open]:rotate-180 transition-transform duration-200',
+          }"
+          block
+        />
         <template #content>
           <div class="mt-2 space-y-3 rounded-lg border border-default p-3">
             <ol
@@ -190,16 +260,7 @@ async function handleFileChange(event: Event) {
               </li>
             </ol>
 
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <ULink
-                :to="schemaUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-              >
-                <UIcon name="i-lucide-external-link" class="size-3.5" />
-                查看题库 JSON Schema
-              </ULink>
+            <div class="flex flex-wrap items-end justify-between gap-2 mt-4">
               <UButton
                 size="xs"
                 variant="outline"
@@ -218,7 +279,7 @@ async function handleFileChange(event: Event) {
       </UCollapsible>
 
       <UAlert
-        v-if="importStore.errors.length"
+        v-if="storeErrors.length"
         color="error"
         variant="soft"
         class="mt-4"
@@ -226,7 +287,7 @@ async function handleFileChange(event: Event) {
       >
         <template #description>
           <ul class="grid gap-1 text-xs">
-            <li v-for="(item, index) in importStore.errors" :key="index">
+            <li v-for="(item, index) in storeErrors" :key="index">
               {{ item }}
             </li>
           </ul>

@@ -10,6 +10,7 @@ import type { Bank, BankMetaEntry, QuestionItem } from '../types/bank';
 import type { Mode, QuestionType } from '../types/core';
 import type { Paper } from '../types/quiz';
 import { listBankMetas, loadBank, savePaper } from '../utils/idb';
+import { makeUniqueQuestionId } from '../utils/questionIds';
 
 const router = useRouter();
 const attemptStore = useAttemptStore();
@@ -43,6 +44,20 @@ const loadedBanks = ref<Record<string, Bank>>({});
 const shuffleQuestions = ref(false);
 const shuffleOptions = ref(false);
 const selectedMode = ref<Mode>('practice');
+
+const modeOptions: { label: string; value: Mode; description: string }[] = [
+  {
+    label: '练习模式',
+    value: 'practice',
+    description:
+      '每题提交后立即判分，并展示参考答案与解析；随时可查看作答小结。',
+  },
+  {
+    label: '考试模式',
+    value: 'exam',
+    description: '作答过程中不显示答案，交卷后统一判分，并统计本次正确率。',
+  },
+];
 const paperTitle = ref('自定义试卷 - ' + moment().format('YYYY-MM-DD HH:mm'));
 
 const typeLabels: Record<QuestionType, string> = {
@@ -370,6 +385,8 @@ async function startQuiz() {
     judge: [],
     indeterminate: [],
   };
+  // 题目 id 只在题库内唯一，跨库组卷必须重新生成，否则作答记录会串题
+  const usedQuestionIds = new Set<string>();
 
   for (const type of allTypes) {
     const target = targetCounts.value[type];
@@ -434,7 +451,12 @@ async function startQuiz() {
             (originalOrder.get(a.id) ?? 0) - (originalOrder.get(c.id) ?? 0),
         );
       }
-      pickedByType[type].push(...picked);
+      pickedByType[type].push(
+        ...picked.map((question) => ({
+          ...question,
+          id: makeUniqueQuestionId(question, b.id, usedQuestionIds),
+        })),
+      );
     }
   }
 
@@ -508,7 +530,11 @@ async function startQuiz() {
       class="rounded-xl border border-dashed border-default py-16"
     >
       <template #actions>
-        <UButton icon="i-lucide-download" label="导入题库" @click="goToImport" />
+        <UButton
+          icon="i-lucide-download"
+          label="导入题库"
+          @click="goToImport"
+        />
       </template>
     </UEmpty>
 
@@ -720,23 +746,18 @@ async function startQuiz() {
           </div>
 
           <div class="mt-5">
-            <p class="mb-2 text-sm font-medium text-highlighted">答题模式</p>
-            <UFieldGroup>
-              <UButton
-                :variant="selectedMode === 'practice' ? 'solid' : 'outline'"
-                :color="selectedMode === 'practice' ? 'primary' : 'neutral'"
-                icon="i-lucide-play"
-                label="练习模式"
-                @click="selectedMode = 'practice'"
-              />
-              <UButton
-                :variant="selectedMode === 'exam' ? 'solid' : 'outline'"
-                :color="selectedMode === 'exam' ? 'primary' : 'neutral'"
-                icon="i-lucide-square-pen"
-                label="考试模式"
-                @click="selectedMode = 'exam'"
-              />
-            </UFieldGroup>
+            <URadioGroup
+              v-model="selectedMode"
+              legend="答题模式"
+              :items="modeOptions"
+              variant="card"
+              size="md"
+              :ui="{
+                legend: 'mb-2 text-sm font-medium text-highlighted',
+                fieldset: 'gap-y-2',
+                item: 'p-3 has-data-[state=checked]:border-primary has-data-[state=checked]:bg-primary/5',
+              }"
+            />
           </div>
         </UCard>
       </div>

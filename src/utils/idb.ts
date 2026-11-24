@@ -1,5 +1,6 @@
 import { openDB, type DBSchema } from 'idb';
 import { toRaw } from 'vue';
+import { ensureUniqueQuestionIds } from './questionIds';
 import type { AttemptState } from '../types/quiz';
 import type { Bank, BankMeta } from '../types/bank';
 import type { Paper, PaperAttempt } from '../types/quiz';
@@ -170,14 +171,31 @@ export async function savePaper(paper: Paper) {
 
 export async function loadPaper(paperId: string): Promise<Paper | undefined> {
   const db = await getDb();
-  return db.get('papers', paperId);
+  const stored = await db.get('papers', paperId);
+  if (!stored) return undefined;
+  return await migratePaperQuestionIds(stored);
 }
 
 export async function listPapers(): Promise<Paper[]> {
   const db = await getDb();
-  const papers = await db.getAll('papers');
+  const stored = await db.getAll('papers');
+  const papers: Paper[] = [];
+  for (const item of stored) {
+    papers.push(await migratePaperQuestionIds(item));
+  }
   papers.sort((a, b) => b.createdAt - a.createdAt);
   return papers;
+}
+
+/**
+ * 惰性修复旧试卷：早期组卷未给题目 id 加题库前缀，同一试卷里可能有重复 id，
+ * 导致按 id 记录的作答串题。读到就修正并写回。
+ */
+async function migratePaperQuestionIds(paper: Paper): Promise<Paper> {
+  const { paper: normalized, changed } = ensureUniqueQuestionIds(paper);
+  if (!changed) return paper;
+  await savePaper(normalized);
+  return normalized;
 }
 
 export async function deletePaper(paperId: string) {
