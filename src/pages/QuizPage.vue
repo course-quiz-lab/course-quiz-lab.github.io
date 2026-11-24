@@ -208,15 +208,6 @@ onBeforeUnmount(() => {
             <p class="truncate text-sm font-medium text-highlighted">
               {{ paper.title }}
             </p>
-            <p class="text-xs text-muted">
-              <template v-if="isExam">
-                未作答 {{ unansweredCount }} 题 · 共
-                {{ paper.questions.length }} 题
-              </template>
-              <template v-else>
-                已作答 {{ answeredCount }} / {{ paper.questions.length }}
-              </template>
-            </p>
           </div>
         </div>
 

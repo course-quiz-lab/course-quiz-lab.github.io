@@ -15,6 +15,8 @@ const props = defineProps<{
   disabled?: boolean;
   /** 是否已判分（练习提交后 / 考试交卷后）：需要标出未选中的正确答案 */
   revealAnswer?: boolean;
+  /** 错题本等列表场景：收紧选项间距与内边距 */
+  dense?: boolean;
 }>();
 const emit = defineEmits<{ (e: 'update:modelValue', value: string[]): void }>();
 
@@ -84,12 +86,15 @@ function updateSelection(option: OptionItem, checked: boolean) {
 </script>
 
 <template>
-  <div class="grid gap-2.5">
+  <div :class="dense ? 'grid gap-1.5' : 'grid gap-2.5'">
     <label
       v-for="option in question.options"
       :key="option.id"
-      class="flex items-center gap-3 rounded-lg border p-3.5 text-sm transition-colors duration-150 sm:text-base"
-      :class="labelClass(option.id)"
+      class="flex items-center rounded-lg border text-sm transition-colors duration-150"
+      :class="[
+        labelClass(option.id),
+        dense ? 'gap-2.5 p-2.5 sm:text-base' : 'gap-3 p-3.5 sm:text-base',
+      ]"
     >
       <input
         :type="isMultiple ? 'checkbox' : 'radio'"

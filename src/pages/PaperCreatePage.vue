@@ -8,7 +8,7 @@ import { useImportStore } from '../stores/import';
 import { usePaperStore } from '../stores/paper';
 import type { Bank, BankMetaEntry, QuestionItem } from '../types/bank';
 import type { Mode, QuestionType } from '../types/core';
-import type { Paper } from '../types/quiz';
+import type { Paper, QuestionSource } from '../types/quiz';
 import { listBankMetas, loadBank, savePaper } from '../utils/idb';
 import { makeUniqueQuestionId } from '../utils/questionIds';
 
@@ -387,6 +387,8 @@ async function startQuiz() {
   };
   // 题目 id 只在题库内唯一，跨库组卷必须重新生成，否则作答记录会串题
   const usedQuestionIds = new Set<string>();
+  // 逐题记录来源，供错题本按课程 / 题库筛选（题库删除或改名后仍可用）
+  const questionSources: Record<string, QuestionSource> = {};
 
   for (const type of allTypes) {
     const target = targetCounts.value[type];
@@ -451,11 +453,17 @@ async function startQuiz() {
             (originalOrder.get(a.id) ?? 0) - (originalOrder.get(c.id) ?? 0),
         );
       }
+      const bankMeta = metas.value.find((m) => m.bankId === b.id)?.meta;
       pickedByType[type].push(
-        ...picked.map((question) => ({
-          ...question,
-          id: makeUniqueQuestionId(question, b.id, usedQuestionIds),
-        })),
+        ...picked.map((question) => {
+          const id = makeUniqueQuestionId(question, b.id, usedQuestionIds);
+          questionSources[id] = {
+            bankId: b.id,
+            bankName: bankMeta?.name,
+            course: bankMeta?.course,
+          };
+          return { ...question, id };
+        }),
       );
     }
   }
@@ -499,6 +507,7 @@ async function startQuiz() {
     bankNames: selectedBankIds
       .map((id) => metas.value.find((m) => m.bankId === id)?.meta.name)
       .filter((n): n is string => !!n),
+    questionSources,
   };
 
   await savePaper(paper);

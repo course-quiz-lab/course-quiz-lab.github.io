@@ -43,7 +43,6 @@ const showPill = computed(() => props.status !== 'unanswered');
     variant="soft"
     size="md"
     :icon="showIcon ? iconMap[props.status] : undefined"
-    :title="labelMap[props.status]"
   >
     {{ labelMap[props.status] }}
   </UBadge>

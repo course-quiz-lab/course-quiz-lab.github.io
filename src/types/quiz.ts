@@ -28,6 +28,13 @@ export type {
   ExcelPreviewData,
 } from './excel';
 
+/** 题目来源信息：题库被删除或改名后，仍能按组卷时的归属筛选 */
+export interface QuestionSource {
+  bankId?: string;
+  bankName?: string;
+  course?: string;
+}
+
 export interface Paper {
   id: string;
   title: string;
@@ -35,6 +42,8 @@ export interface Paper {
   questions: QuestionItem[];
   /** Names of source banks this paper draws questions from */
   bankNames?: string[];
+  /** 逐题来源（题目 id → 来源）；旧试卷可能缺失，读取时按题库元数据回退推断 */
+  questionSources?: Record<string, QuestionSource>;
 }
 
 export interface PaperAttempt {
