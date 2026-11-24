@@ -81,10 +81,6 @@ const steps = [
       />
 
       <div class="relative max-w-2xl">
-        <UBadge color="primary" variant="soft" icon="i-lucide-sparkles">
-          本地优先 · 无需登录
-        </UBadge>
-
         <h1
           class="mt-5 text-3xl font-semibold tracking-tight text-highlighted sm:text-5xl"
         >
@@ -146,7 +142,6 @@ const steps = [
           :to="act.to"
           :target="act.target"
           variant="outline"
-          spotlight
           :ui="{
             root: 'transition duration-200 hover:-translate-y-0.5 hover:border-primary/40',
           }"
@@ -173,7 +168,7 @@ const steps = [
               <UIcon :name="step.icon" class="size-5" />
             </span>
             <span class="text-sm font-medium text-dimmed">
-              0{{ index + 1 }}
+              Step {{ index + 1 }}
             </span>
           </div>
           <h3 class="mt-4 text-base font-semibold text-highlighted">

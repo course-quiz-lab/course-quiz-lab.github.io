@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import Pagination from '../../components/ui/Pagination.vue';
+import { confirmDialog } from '../../composables/useConfirm';
 import { useImportStore } from '../../stores/import';
 import type { CloudBankEntry, CloudBankIndex } from '../../types/quiz';
 import { listBankMetas, loadBank } from '../../utils/idb';
@@ -156,11 +157,14 @@ function startDownload(entries: CloudBankEntry[]) {
 
 async function downloadSelected() {
   if (selected.value.size === 0) return;
-  if (
-    selected.value.size >= 2 &&
-    !confirm(`确认下载选中的 ${selected.value.size} 个题库？`)
-  )
-    return;
+  if (selected.value.size >= 2) {
+    const ok = await confirmDialog({
+      title: '下载题库',
+      description: `确认下载选中的 ${selected.value.size} 个题库？下载会依次进行，可在进度页取消。`,
+      confirmText: '开始下载',
+    });
+    if (!ok) return;
+  }
 
   const entries = banks.value.filter((e) => selected.value.has(e.url));
   selected.value = new Set();

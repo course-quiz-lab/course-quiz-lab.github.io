@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import PageLayout from '../components/ui/PageLayout.vue';
+import { confirmDialog } from '../composables/useConfirm';
 import { useAttemptStore } from '../stores/attempt';
 import { usePaperStore } from '../stores/paper';
 import type { QuestionType } from '../types/core';
@@ -97,17 +98,29 @@ function viewWrongQuestions(attempt: PaperAttempt) {
 }
 
 async function removePaper(id: string) {
-  if (confirm('确认删除该试卷及所有作答记录？')) {
-    await deletePaper(id);
-    papers.value = await listPapers();
-    if (selectedPaperId.value === id) {
-      selectedPaperId.value = papers.value.length ? papers.value[0].id : null;
-    }
+  const ok = await confirmDialog({
+    title: '删除试卷',
+    description: '该试卷及其所有作答记录都会被删除，此操作不可恢复。',
+    confirmText: '删除',
+    color: 'error',
+  });
+  if (!ok) return;
+
+  await deletePaper(id);
+  papers.value = await listPapers();
+  if (selectedPaperId.value === id) {
+    selectedPaperId.value = papers.value.length ? papers.value[0].id : null;
   }
 }
 
 async function deleteAttempt(attemptId: string) {
-  if (!confirm('确认删除此作答记录？')) return;
+  const ok = await confirmDialog({
+    title: '删除作答记录',
+    description: '删除后该次作答结果与统计将无法恢复。',
+    confirmText: '删除',
+    color: 'error',
+  });
+  if (!ok) return;
   await deletePaperAttempt(attemptId);
   // Refresh attempts for current paper
   if (selectedPaperId.value) {
@@ -155,7 +168,7 @@ async function deleteAttempt(attemptId: string) {
     </UEmpty>
 
     <div v-else class="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <UCard :ui="{ body: 'p-2' }" class="h-fit lg:sticky lg:top-24">
+      <UCard :ui="{ body: 'p-2' }" class="h-fit lg:sticky lg:top-20">
         <div class="flex items-center justify-between px-2 pb-2 pt-1">
           <span class="text-xs font-medium uppercase tracking-wide text-muted">
             我的试卷 · {{ papers.length }}

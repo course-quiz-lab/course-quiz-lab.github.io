@@ -120,7 +120,7 @@ watch(showAll, () => {
 
 <template>
   <aside
-    class="h-fit select-none rounded-xl border border-default bg-default p-4 max-lg:order-first lg:sticky lg:top-40"
+    class="h-fit select-none rounded-xl border border-default bg-default p-4 max-lg:order-first lg:sticky lg:top-20"
   >
     <div class="mb-3 flex items-center justify-between">
       <span class="text-sm font-medium text-highlighted">答题卡</span>

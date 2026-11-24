@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { confirmDialog } from '../../composables/useConfirm';
 import { useBankStore } from '../../stores/bank';
 import { useImportStore, type DownloadQueueItem } from '../../stores/import';
 import type { CloudBankEntry } from '../../types/quiz';
@@ -53,8 +54,16 @@ async function startDownload() {
   isProcessing.value = false;
 }
 
-function cancelDownload() {
-  if (!confirm('确定取消下载？')) return;
+async function cancelDownload() {
+  const ok = await confirmDialog({
+    title: '取消下载',
+    description: '已完成的题库会保留，正在下载与排队中的任务将被中断。',
+    confirmText: '取消下载',
+    cancelText: '继续下载',
+    color: 'warning',
+  });
+  if (!ok) return;
+
   isCancelled.value = true;
   abortController.abort('用户取消');
   // Mark remaining pending items as cancelled

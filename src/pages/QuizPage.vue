@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import FullPaperView from '../components/FullPaperView.vue';
 import SingleQuestionView from '../components/SingleQuestionView.vue';
 import TimerChip from '../components/TimerChip.vue';
+import { confirmDialog } from '../composables/useConfirm';
 import { useImmersiveMode } from '../composables/useImmersiveMode';
 import { useAttemptStore } from '../stores/attempt';
 import { usePaperStore } from '../stores/paper';
@@ -114,7 +115,11 @@ watch(
 async function submitExam() {
   if (!attempt.value) return;
   if (unansweredCount.value > 0) {
-    const ok = confirm(`还有 ${unansweredCount.value} 题未作答，确定交卷吗？`);
+    const ok = await confirmDialog({
+      title: '交卷确认',
+      description: `还有 ${unansweredCount.value} 题未作答，确定交卷吗？交卷后将立即判分。`,
+      confirmText: '交卷',
+    });
     if (!ok) return;
   }
   await attemptStore.submitExam();
@@ -124,8 +129,12 @@ async function submitExam() {
 async function startNewAttempt() {
   if (!paper.value) return;
   const label = isExam.value ? '考试' : '练习';
-  if (!confirm(`确认重新生成一次${label}作答？这不会覆盖您之前的作答记录。`))
-    return;
+  const ok = await confirmDialog({
+    title: `重新生成${label}作答`,
+    description: '将新建一份空白的作答记录，之前的历史记录不会被覆盖。',
+    confirmText: '重新生成',
+  });
+  if (!ok) return;
   const newAttemptId = await attemptStore.resetAttempt(
     paper.value.id,
     attempt.value!.mode,
@@ -149,12 +158,6 @@ async function toggleView() {
   await attemptStore.setView(next);
   await focusQuizArea();
 }
-
-/** 仅 lg 及以上吸顶（窄屏吸顶会遮挡题目内容）；
- *  沉浸模式下站点导航被隐藏，工具条需要贴到视口顶部 */
-const toolbarStickyClass = computed(() =>
-  isImmersive.value ? 'lg:top-0' : 'lg:top-16',
-);
 
 async function toggleImmersiveMode() {
   if (isImmersive.value) {
@@ -190,8 +193,7 @@ onBeforeUnmount(() => {
 <template>
   <div v-if="paper && attempt" class="page">
     <section
-      class="space-y-3 rounded-xl border border-default bg-default p-3 sm:p-4 lg:sticky lg:z-30 lg:bg-default/85 lg:backdrop-blur-sm"
-      :class="toolbarStickyClass"
+      class="space-y-3 rounded-xl border border-default bg-default p-3 sm:p-4"
     >
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="flex min-w-0 items-center gap-3">

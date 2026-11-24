@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import PageLayout from '../components/ui/PageLayout.vue';
+import { confirmDialog } from '../composables/useConfirm';
 import type { Bank, BankMetaEntry } from '../types/bank';
 import { clearBank, listBankMetas, loadBank } from '../utils/idb';
 
@@ -20,7 +21,12 @@ onMounted(async () => {
 
 async function handleDelete(entry: BankMetaEntry) {
   const name = entry.meta.name || entry.meta.course;
-  const ok = confirm(`确定要删除题库「${name}」吗？此操作不可恢复。`);
+  const ok = await confirmDialog({
+    title: '删除题库',
+    description: `确定要删除题库「${name}」吗？此操作不可恢复。`,
+    confirmText: '删除',
+    color: 'error',
+  });
   if (!ok) return;
   deletingId.value = entry.bankId;
   try {
@@ -118,7 +124,12 @@ async function handleExport(entry: BankMetaEntry) {
     "
   >
     <template #header-actions>
-      <UButton to="/import" icon="i-lucide-download" label="导入题库" size="sm" />
+      <UButton
+        to="/import"
+        icon="i-lucide-download"
+        label="导入题库"
+        size="sm"
+      />
     </template>
 
     <div v-if="isLoading" class="grid gap-4 md:grid-cols-2">

@@ -9,6 +9,11 @@
     'Cascadia Code', ui-monospace, 'SFMono-Regular', 'Courier New', monospace;
 }
 
+/* 压缩站点导航高度（Nuxt UI 默认 4rem），同时作用于 UHeader 与移动端全屏菜单头部 */
+:root {
+  --ui-header-height: 3.5rem;
+}
+
 html {
   scroll-behavior: smooth;
   -webkit-tap-highlight-color: transparent;
